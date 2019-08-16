@@ -6,6 +6,6 @@ cc_library(
     hdrs = [
         'bipolar/option.hpp',
     ],
-    copts = ['-std=c++14', '-pipe', '-Wall', '-Wextra'],
+    copts = ['-std=c++17', '-pipe', '-Wall', '-Wextra'],
     visibility = ['//visibility:public'],
 )

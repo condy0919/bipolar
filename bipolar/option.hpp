@@ -29,6 +29,9 @@ struct is_option_impl<Option<T>> : std::true_type {};
 
 template <typename T>
 using is_option = is_option_impl<T>;
+
+template <typename T>
+inline constexpr bool is_option_v = is_option<T>::value;
 } // namespace detail
 
 
@@ -51,13 +54,13 @@ constexpr detail::None None{detail::None::_secret::_token};
 /// @see Option::Option
 template <typename T>
 constexpr Option<T> Some(T&& val) noexcept(
-    std::is_nothrow_move_constructible<T>::value) {
+    std::is_nothrow_move_constructible_v<T>) {
     return {std::move(val)};
 }
 
 template <typename T>
 constexpr Option<T> Some(const T& val) noexcept(
-    std::is_nothrow_copy_constructible<T>::value) {
+    std::is_nothrow_copy_constructible_v<T>) {
     return {val};
 }
 /// @}
@@ -105,9 +108,9 @@ constexpr Option<T> Some(const T& val) noexcept(
 ///
 template <typename T>
 class Option {
-    static_assert(!std::is_reference<T>::value,
+    static_assert(!std::is_reference_v<T>,
                   "Option cannot be used with reference types");
-    static_assert(!std::is_abstract<T>::value,
+    static_assert(!std::is_abstract_v<T>,
                   "Option cannot be used with abstract types");
 
 public:
@@ -123,20 +126,19 @@ public:
     /// @{
     /// @brief Constructs from value directly
     constexpr Option(T&& val) noexcept(
-        std::is_nothrow_move_constructible<T>::value) {
+        std::is_nothrow_move_constructible_v<T>) {
         construct(std::move(val));
     }
 
     constexpr Option(const T& val) noexcept(
-        std::is_nothrow_copy_constructible<T>::value) {
+        std::is_nothrow_copy_constructible_v<T>) {
         construct(val);
     }
     /// @}
 
     /// @{
     /// @brief Constructs from others
-    Option(Option&& rhs) noexcept(
-        std::is_nothrow_move_constructible<T>::value) {
+    Option(Option&& rhs) noexcept(std::is_nothrow_move_constructible_v<T>) {
         if (rhs.has_value()) {
             construct(std::move(rhs.value()));
             rhs.clear();
@@ -144,7 +146,7 @@ public:
     }
 
     Option(const Option& rhs) noexcept(
-        std::is_nothrow_copy_constructible<T>::value) {
+        std::is_nothrow_copy_constructible_v<T>) {
         if (rhs.has_value()) {
             construct(rhs.value());
         }
@@ -159,7 +161,7 @@ public:
     /// @{
     /// @brief Assigns with another Option value
     void assign(Option&& rhs) noexcept(
-        std::is_nothrow_move_constructible<T>::value) {
+        std::is_nothrow_move_constructible_v<T>) {
         if (this != std::addressof(rhs)) {
             if (rhs.has_value()) {
                 assign(std::move(rhs.value()));
@@ -171,7 +173,7 @@ public:
     }
 
     void assign(const Option& rhs) noexcept(
-        std::is_nothrow_copy_constructible<T>::value) {
+        std::is_nothrow_copy_constructible_v<T>) {
         if (rhs.has_value()) {
             assign(rhs.value());
         } else {
@@ -182,7 +184,7 @@ public:
 
     /// @{
     /// @brief Assigns with value directly
-    void assign(T&& val) noexcept(std::is_nothrow_move_constructible<T>::value) {
+    void assign(T&& val) noexcept(std::is_nothrow_move_constructible_v<T>) {
         if (has_value()) {
             storage_.value = std::move(val);
         } else {
@@ -191,7 +193,7 @@ public:
     }
 
     void assign(const T& val) noexcept(
-        std::is_nothrow_copy_constructible<T>::value) {
+        std::is_nothrow_copy_constructible_v<T>) {
         if (has_value()) {
             storage_.value = val;
         } else {
@@ -211,7 +213,7 @@ public:
     /// @brief Same with `assign(Option&&)`
     /// @see assign(Option&&)
     Option& operator=(Option&& rhs) noexcept(
-        std::is_nothrow_move_constructible<T>::value) {
+        std::is_nothrow_move_constructible_v<T>) {
         assign(std::move(rhs));
         return *this;
     }
@@ -219,7 +221,7 @@ public:
     /// @brief Same with `assign(const Option&)`
     /// @see assign(const Option&)
     Option& operator=(const Option& rhs) noexcept(
-        std::is_nothrow_copy_constructible<T>::value) {
+        std::is_nothrow_copy_constructible_v<T>) {
         assign(rhs);
         return *this;
     }
@@ -239,7 +241,7 @@ public:
     /// ```
     template <typename... Args>
     T& emplace(Args&&... args) noexcept(
-        std::is_nothrow_move_constructible<T>::value) {
+        std::is_nothrow_move_constructible_v<T>) {
         clear();
         construct(std::forward<Args>(args)...);
         return value();
@@ -258,9 +260,7 @@ public:
     }
 
     /// @brief Swaps with other option
-    /// @todo c++17 has `std::is_nothrow_swappable`
-    void swap(Option& rhs) noexcept(noexcept(std::swap(std::declval<T&>(),
-                                                       std::declval<T&>()))) {
+    void swap(Option& rhs) noexcept(std::is_nothrow_swappable_v<T>) {
         if (has_value() && rhs.has_value()) {
             using std::swap;
             swap(value(), rhs.value());
@@ -335,16 +335,16 @@ public:
     /// @{
     /// @brief Returns the contained value or the result of function
     /// @return T
-    template <typename F,
-              std::enable_if_t<std::is_same<std::result_of_t<F()>, T>::value,
-                               int> = 0>
+    template <
+        typename F,
+        std::enable_if_t<std::is_same_v<std::result_of_t<F()>, T>, int> = 0>
     constexpr T value_or_else(F&& f) const& {
         return has_value() ? value() : std::forward<F>(f)();
     }
 
-    template <typename F,
-              std::enable_if_t<std::is_same<std::result_of_t<F()>, T>::value,
-                               int> = 0>
+    template <
+        typename F,
+        std::enable_if_t<std::is_same_v<std::result_of_t<F()>, T>, int> = 0>
     constexpr T value_or_else(F&& f) && {
         return has_value() ? std::move(value()) : std::forward<F>(f)();
     }
@@ -393,17 +393,17 @@ public:
     /// @tparam D :: () -> U
     ///
     /// @return U
-    template <typename F, typename D, typename U = std::result_of_t<F(T)>,
-              std::enable_if_t<std::is_same<U, std::result_of_t<D()>>::value,
-                               int> = 0>
+    template <
+        typename F, typename D, typename U = std::result_of_t<F(T)>,
+        std::enable_if_t<std::is_same_v<U, std::result_of_t<D()>>, int> = 0>
     U map_or_else(D&& d, F&& f) const& {
         return has_value() ? std::forward<F>(f)(value())
                            : std::forward<D>(d)();
     }
 
-    template <typename F, typename D, typename U = std::result_of_t<F(T)>,
-              std::enable_if_t<std::is_same<U, std::result_of_t<D()>>::value,
-                               int> = 0>
+    template <
+        typename F, typename D, typename U = std::result_of_t<F(T)>,
+        std::enable_if_t<std::is_same_v<U, std::result_of_t<D()>>, int> = 0>
     U map_or_else(D&& d, F&& f) && {
         return has_value() ? std::forward<F>(f)(std::move(value()))
                            : std::forward<D>(d)();
@@ -419,7 +419,7 @@ public:
     template <typename F,
               typename Arg = std::add_lvalue_reference_t<std::add_const_t<T>>,
               typename R = std::result_of_t<F(Arg)>,
-              std::enable_if_t<detail::is_option<R>::value, int> = 0>
+              std::enable_if_t<detail::is_option_v<R>, int> = 0>
     R and_then(F&& f) const& {
         return has_value() ? std::forward<F>(f)(value())
                            : None;
@@ -431,7 +431,7 @@ public:
     ///
     /// @return Option\<U\>
     template <typename F, typename R = std::result_of_t<F(T)>,
-              std::enable_if_t<detail::is_option<R>::value, int> = 0>
+              std::enable_if_t<detail::is_option_v<R>, int> = 0>
     R and_then(F&& f) && {
         return has_value() ? std::forward<F>(f)(std::move(value()))
                            : None;
@@ -448,8 +448,8 @@ public:
     /// @return Option\<T\>
     template <typename F,
               typename Arg = std::add_lvalue_reference_t<std::add_const_t<T>>,
-              std::enable_if_t<
-                  std::is_same<std::result_of_t<F(Arg)>, bool>::value, int> = 0>
+              std::enable_if_t<std::is_same_v<std::result_of_t<F(Arg)>, bool>,
+                               int> = 0>
     Option<T> filter(F&& f) const& {
         return has_value() && std::forward<F>(f)(value()) ? *this
                                                           : None;
@@ -457,8 +457,8 @@ public:
 
     template <typename F,
               typename Arg = std::add_lvalue_reference_t<std::add_const_t<T>>,
-              std::enable_if_t<
-                  std::is_same<std::result_of_t<F(Arg)>, bool>::value, int> = 0>
+              std::enable_if_t<std::is_same_v<std::result_of_t<F(Arg)>, bool>,
+                               int> = 0>
     Option<T> filter(F&& f) && {
         return has_value() && std::forward<F>(f)(value()) ? std::move(*this)
                                                           : None;
@@ -472,13 +472,13 @@ public:
     ///
     /// @return Option\<T\>
     template <typename F, typename U = std::result_of_t<F()>,
-              std::enable_if_t<std::is_same<U, Option<T>>::value, int> = 0>
+              std::enable_if_t<std::is_same_v<U, Option<T>>, int> = 0>
     Option<T> or_else(F&& f) const& {
         return has_value() ? *this : std::forward<F>(f)();
     }
 
     template <typename F, typename U = std::result_of_t<F()>,
-              std::enable_if_t<std::is_same<U, Option<T>>::value, int> = 0>
+              std::enable_if_t<std::is_same_v<U, Option<T>>, int> = 0>
     Option<T> or_else(F&& f) && {
         return has_value() ? std::move(*this) : std::forward<F>(f)();
     }
@@ -618,7 +618,7 @@ private:
         }
     };
 
-    using Storage = std::conditional_t<std::is_trivially_destructible<T>::value,
+    using Storage = std::conditional_t<std::is_trivially_destructible_v<T>,
                                        TrivialStorage, NonTrivialStorage>;
     Storage storage_;
 };

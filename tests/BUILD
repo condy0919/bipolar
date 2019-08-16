@@ -3,7 +3,7 @@ cc_test(
     srcs = [
         'option_test.cpp',
     ],
-    copts = ['-std=c++14', '-pipe', '-Wall', '-Wextra'],
+    copts = ['-std=c++17', '-pipe', '-Wall', '-Wextra'],
     deps = [
         '//:bipolar',
         '@gtest//:gtest_main',
