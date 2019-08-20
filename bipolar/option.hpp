@@ -1,6 +1,9 @@
 #ifndef BIPOLAR_OPTION_HPP_
 #define BIPOLAR_OPTION_HPP_
 
+/// \file option.hpp
+
+
 #include <new>
 #include <cassert>
 #include <cstdint>
@@ -9,8 +12,6 @@
 #include <type_traits>
 #include <utility>
 
-
-/// \file option.hpp
 
 namespace bipolar {
 template <typename>
@@ -401,7 +402,8 @@ public:
     /// @}
 
     /// @{
-    /// \brief Maps an `Option<T>` to `Option<U>` by applying a function to the contained value
+    /// \brief Maps an `Option<T>` to `Option<U>` by applying a function to
+    /// the contained value
     ///
     /// \tparam F :: T -> U
     /// \return Option\<U\>
@@ -430,7 +432,8 @@ public:
     /// @}
 
     /// @{
-    /// \brief Applies the function to the contained value or returns the provided default value
+    /// \brief Applies the function to the contained value or returns
+    /// the provided default value
     ///
     /// \tparam F :: T -> U
     /// \return U
@@ -460,7 +463,9 @@ public:
     /// @}
 
     /// @{
-    /// \brief Applies the function to the contained value or return the result of `d`
+    /// \brief Applies the function to the contained value or
+    /// return the result of functor \c d
+    ///
     /// \tparam F :: T -> U
     /// \tparam D :: () -> U
     /// \return U
@@ -494,7 +499,9 @@ public:
     /// @}
 
     /// @{
-    /// \brief Returns `None` if the option is `None`, otherwise calls `f` with the wrapped value and returns the result
+    /// \brief Returns `None` if the option is `None`, otherwise calls `f` with
+    /// the wrapped value and returns the result
+    ///
     /// \tparam F :: const T& -> Option\<U\>
     /// \return Option\<U\>
     ///
@@ -520,7 +527,9 @@ public:
                            : None;
     }
 
-    /// \brief Returns `None` if the option is `None`, otherwise calls `f` with the wrapped value and returns the result
+    /// \brief Returns `None` if the option is `None`, otherwise
+    /// calls \c f with the wrapped value and returns the result
+    ///
     /// \tparam F :: T -> Option\<U\>
     /// \return Option\<U\>
     template <typename F, typename R = std::invoke_result_t<F, T>,
@@ -532,9 +541,11 @@ public:
     /// @}
 
     /// @{
-    /// \brief Returns `None` if the option is `None`, otherwise calls `f` with the wrapped value and returns:
+    /// \brief Returns `None` if the option is `None`, otherwise calls `f`
+    /// with the wrapped value and returns:
     /// - `Some(t)` if `f` returns `true` where `t` is the wrapped value, and
     /// - `None` if `f` returns `false`
+    ///
     /// \tparam F :: const T& -> bool
     /// \return Option\<T\>
     ///
@@ -563,7 +574,9 @@ public:
     /// @}
 
     /// @{
-    /// \brief Returns the option if it contains a value, otherwise calls \c f and returns the result
+    /// \brief Returns the option if it contains a value, otherwise
+    /// calls \c f and returns the result
+    ///
     /// \tparam F :: () -> Option\<T\>
     /// \return Option\<T\>
     ///
