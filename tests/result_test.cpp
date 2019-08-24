@@ -1,4 +1,4 @@
-#include "bipolar/result.hpp"
+#include "bipolar/core/result.hpp"
 #include <string>
 #include <ostream>
 #include <memory>

@@ -1,11 +1,11 @@
-#ifndef BIPOLAR_RESULT_HPP_
-#define BIPOLAR_RESULT_HPP_
+#ifndef BIPOLAR_CORE_RESULT_HPP_
+#define BIPOLAR_CORE_RESULT_HPP_
 
 /// \file
 
-#include "bipolar/void.hpp"
-#include "bipolar/traits.hpp"
-#include "bipolar/option.hpp"
+#include "bipolar/core/void.hpp"
+#include "bipolar/core/traits.hpp"
+#include "bipolar/core/option.hpp"
 #include <cstdint>
 #include <new>
 #include <stdexcept>

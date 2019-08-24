@@ -1,4 +1,4 @@
-#include "bipolar/traits.hpp"
+#include "bipolar/core/traits.hpp"
 #include <gtest/gtest.h>
 
 using namespace bipolar;

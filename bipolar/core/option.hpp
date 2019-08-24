@@ -1,5 +1,5 @@
-#ifndef BIPOLAR_OPTION_HPP_
-#define BIPOLAR_OPTION_HPP_
+#ifndef BIPOLAR_CORE_OPTION_HPP_
+#define BIPOLAR_CORE_OPTION_HPP_
 
 /// \file option.hpp
 

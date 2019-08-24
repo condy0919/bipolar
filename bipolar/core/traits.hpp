@@ -1,5 +1,5 @@
-#ifndef BIPOLAR_TRAITS_HPP_
-#define BIPOLAR_TRAITS_HPP_
+#ifndef BIPOLAR_CORE_TRAITS_HPP_
+#define BIPOLAR_CORE_TRAITS_HPP_
 
 /// \file traits.hpp
 /// \see https://en.cppreference.com/w/cpp/header/concepts

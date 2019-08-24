@@ -5,7 +5,7 @@ cc_binary(
     ],
     copts = ['-std=c++17', '-pipe', '-Wall', '-Wextra'],
     deps = [
-        '//:bipolar',
+        '//:core',
         '@benchmark//:benchmark_main',
     ]
 )
