@@ -4,10 +4,11 @@ cc_library(
 
     ],
     hdrs = [
-        'bipolar/option.hpp',
-        'bipolar/result.hpp',
-        'bipolar/void.hpp',
-        'bipolar/traits.hpp',
+        'bipolar/core.hpp',
+        'bipolar/core/option.hpp',
+        'bipolar/core/result.hpp',
+        'bipolar/core/void.hpp',
+        'bipolar/core/traits.hpp',
     ],
     copts = ['-std=c++17', '-pipe', '-Wall', '-Wextra'],
     visibility = ['//visibility:public'],
