@@ -1,0 +1,12 @@
+licenses(['notice'])
+
+cc_library(
+    name = 'all_external',
+    srcs = [':empty.cpp'],
+)
+
+genrule(
+    name = 'empty_cc',
+    outs = ['empty.cpp'],
+    cmd = 'touch "$(@D)/empty.cpp"',
+)

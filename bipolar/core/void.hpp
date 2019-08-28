@@ -2,7 +2,7 @@
 #define BIPOLAR_CORE_VOID_HPP_
 
 
-/// \file
+/// \file void.hpp
 
 namespace bipolar {
 /// \class Void
