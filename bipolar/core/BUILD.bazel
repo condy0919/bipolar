@@ -37,3 +37,17 @@ cc_test(
         '@gtest//:gtest_main',
     ],
 )
+
+cc_test(
+    name = 'option_benchmark',
+    srcs = [
+        'benchmarks/option_benchmark.cpp',
+    ],
+    copts = BIPOLAR_TEST_COPTS,
+    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
+    tags = ['benchmark'],
+    deps = [
+        ':core',
+        '@benchmark//:benchmark_main',
+    ]
+)
