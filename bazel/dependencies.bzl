@@ -22,6 +22,9 @@ def _com_github_google_benchmark():
     )
 
 def _com_github_axboe_liburing():
+    """
+    linux/io_uring.h shipped by distribution is old
+    """
     new_git_repository(
         name = 'liburing',
         remote = 'https://github.com/axboe/liburing',
