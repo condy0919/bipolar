@@ -108,13 +108,13 @@ template <typename>
 struct StorageTrait;
 
 template <typename, typename>
-class SmallTrivialStorage;
+struct SmallTrivialStorage;
 
 template <typename, typename>
-class TrivialStorage;
+struct TrivialStorage;
 
 template <typename, typename>
-class NonTrivialStorage;
+struct NonTrivialStorage;
 
 template <typename T, typename E>
 struct StorageTrait<SmallTrivialStorage<T, E>> {

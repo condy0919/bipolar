@@ -808,6 +808,7 @@ constexpr bool operator!=(const Option<T>& lhs, detail::None) {
 
 template <typename T>
 constexpr bool operator<(const Option<T>& lhs, detail::None) {
+    (void)lhs;
     return false;
 }
 
@@ -823,6 +824,7 @@ constexpr bool operator<=(const Option<T>& lhs, detail::None) {
 
 template <typename T>
 constexpr bool operator>=(const Option<T>& lhs, detail::None) {
+    (void)lhs;
     return true;
 }
 
@@ -844,11 +846,13 @@ constexpr bool operator<(detail::None, const Option<T>& rhs) {
 
 template <typename T>
 constexpr bool operator>(detail::None, const Option<T>& rhs) {
+    (void)rhs;
     return false;
 }
 
 template <typename T>
 constexpr bool operator<=(detail::None, const Option<T>& rhs) {
+    (void)rhs;
     return true;
 }
 
