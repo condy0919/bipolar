@@ -1,4 +1,4 @@
-#include "bipolar/result.hpp"
+#include "bipolar/core/result.hpp"
 #include <string>
 #include <ostream>
 #include <memory>
@@ -20,6 +20,24 @@ struct NoDefault {
     NoDefault(int, int) {}
     char a, b, c;
 };
+
+TEST(Result, TryMacro) {
+    auto succ = []() -> Result<int, int> {
+        Result<int, int> x = Ok(1);
+        return Ok(BIPOLAR_TRY(x) + 1);
+    };
+    auto succ_result = succ();
+    EXPECT_TRUE(bool(succ_result));
+    EXPECT_EQ(succ_result.value(), 2);
+
+    auto fail = []() -> Result<int, int> {
+        Result<int, int> x = Err(2);
+        return Ok(BIPOLAR_TRY(x) + 1);
+    };
+    auto fail_result = fail();
+    EXPECT_FALSE(bool(fail_result));
+    EXPECT_EQ(fail_result.error(), 2);
+}
 
 TEST(Result, NoDefault) {
     Result<NoDefault, int> x = Ok(NoDefault{42, 42});

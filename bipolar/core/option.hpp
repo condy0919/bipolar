@@ -1,5 +1,5 @@
-#ifndef BIPOLAR_OPTION_HPP_
-#define BIPOLAR_OPTION_HPP_
+#ifndef BIPOLAR_CORE_OPTION_HPP_
+#define BIPOLAR_CORE_OPTION_HPP_
 
 /// \file option.hpp
 
@@ -808,6 +808,7 @@ constexpr bool operator!=(const Option<T>& lhs, detail::None) {
 
 template <typename T>
 constexpr bool operator<(const Option<T>& lhs, detail::None) {
+    (void)lhs;
     return false;
 }
 
@@ -823,6 +824,7 @@ constexpr bool operator<=(const Option<T>& lhs, detail::None) {
 
 template <typename T>
 constexpr bool operator>=(const Option<T>& lhs, detail::None) {
+    (void)lhs;
     return true;
 }
 
@@ -844,11 +846,13 @@ constexpr bool operator<(detail::None, const Option<T>& rhs) {
 
 template <typename T>
 constexpr bool operator>(detail::None, const Option<T>& rhs) {
+    (void)rhs;
     return false;
 }
 
 template <typename T>
 constexpr bool operator<=(detail::None, const Option<T>& rhs) {
+    (void)rhs;
     return true;
 }
 
@@ -861,12 +865,6 @@ constexpr bool operator>=(detail::None, const Option<T>& rhs) {
 } // namespace bipolar
 
 namespace std {
-template <typename T>
-void swap(bipolar::Option<T>& lhs,
-          bipolar::Option<T>& rhs) noexcept(noexcept(lhs.swap(rhs))) {
-    lhs.swap(rhs);
-}
-
 template <typename T>
 struct hash<bipolar::Option<T>> {
     std::size_t operator()(const bipolar::Option<T>& opt) const {

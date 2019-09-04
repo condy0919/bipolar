@@ -1,8 +1,8 @@
-#ifndef BIPOLAR_VOID_HPP_
-#define BIPOLAR_VOID_HPP_
+#ifndef BIPOLAR_CORE_VOID_HPP_
+#define BIPOLAR_CORE_VOID_HPP_
 
 
-/// \file
+/// \file void.hpp
 
 namespace bipolar {
 /// \class Void

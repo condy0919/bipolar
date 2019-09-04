@@ -1,17 +1,29 @@
-#ifndef BIPOLAR_RESULT_HPP_
-#define BIPOLAR_RESULT_HPP_
+#ifndef BIPOLAR_CORE_RESULT_HPP_
+#define BIPOLAR_CORE_RESULT_HPP_
 
-/// \file
+/// \file result.hpp
 
-#include "bipolar/void.hpp"
-#include "bipolar/traits.hpp"
-#include "bipolar/option.hpp"
+#include "bipolar/core/void.hpp"
+#include "bipolar/core/traits.hpp"
+#include "bipolar/core/option.hpp"
 #include <cstdint>
 #include <new>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 
+/// \brief Macro sugar for unwraping a \c Result. Early return when \c Err state
+///
+/// \param expr of Result\<T, E\> return type
+#define BIPOLAR_TRY(expr)                                                      \
+    ({                                                                         \
+        static_assert(::bipolar::detail::is_result_v<decltype((expr))>);       \
+        auto result = (expr);                                                  \
+        if (!bool(result)) {                                                   \
+            return result;                                                     \
+        }                                                                      \
+        ::std::move(result.value());                                           \
+    })
 
 namespace bipolar {
 template <typename T, typename E>
@@ -108,13 +120,13 @@ template <typename>
 struct StorageTrait;
 
 template <typename, typename>
-class SmallTrivialStorage;
+struct SmallTrivialStorage;
 
 template <typename, typename>
-class TrivialStorage;
+struct TrivialStorage;
 
 template <typename, typename>
-class NonTrivialStorage;
+struct NonTrivialStorage;
 
 template <typename T, typename E>
 struct StorageTrait<SmallTrivialStorage<T, E>> {
@@ -1600,13 +1612,5 @@ inline bool operator>=(const Err<E>& lhs, const Result<T, E>& rhs) noexcept {
 /// @}
 
 } // namespace bipolar
-
-namespace std {
-template <typename T, typename E>
-void swap(bipolar::Result<T, E>& lhs,
-          bipolar::Result<T, E>& rhs) noexcept(noexcept(lhs.swap(rhs))) {
-    lhs.swap(rhs);
-}
-} // namespace std
 
 #endif
