@@ -21,34 +21,6 @@ namespace bipolar {
 struct IOUringSQE : io_uring_sqe {
     /// \brief 
     ///
-    /// \param data
-    void data(void* data) {
-        this->user_data = (std::uint64_t)data;
-    }
-
-    /// \brief 
-    ///
-    /// \return 
-    void* data() const {
-        return (void*)(std::uintptr_t)this->user_data;
-    }
-
-    /// \brief 
-    ///
-    /// \param flag
-    void flags(std::uint8_t flag) {
-        this->io_uring_sqe::flags = flag;
-    }
-
-    /// \brief 
-    ///
-    /// \return 
-    std::uint8_t flags() const {
-        return this->io_uring_sqe::flags;
-    }
-
-    /// \brief 
-    ///
     /// \param fd
     /// \param iovecs[]
     /// \param n
@@ -64,6 +36,7 @@ struct IOUringSQE : io_uring_sqe {
     /// \param buf
     /// \param n
     /// \param offset
+    /// \param buf_index
     void read_fixed(int fd, void* buf, std::size_t n, off_t offset,
                     std::uint16_t buf_index) {
         prep_rw(IORING_OP_READ_FIXED, fd, buf, n, offset);
@@ -87,6 +60,7 @@ struct IOUringSQE : io_uring_sqe {
     /// \param buf
     /// \param n
     /// \param offset
+    /// \param buf_index
     void write_fixed(int fd, const void* buf, std::size_t n, off_t offset,
                      std::uint16_t buf_index) {
         prep_rw(IORING_OP_WRITE_FIXED, fd, buf, n, offset);
@@ -266,25 +240,31 @@ public:
     /// kernel about it. The caller may call this function multiple times
     /// before calling \c submit
     ///
-    /// \return an \c Ok with vacant SQE, \c Err Void
+    /// \return an \c Ok with vacant SQE or \c Err Void
     /// \see submit
     Result<std::reference_wrapper<IOUringSQE>, Void> get_submission_entry();
 
-    /// \brief 
+    /// \brief Returns an IO CQE, if one is available.
     ///
     /// \param wait
     ///
     /// \return
-    Result<Option<std::reference_wrapper<IOUringCQE>>, int>
-    get_completion_entry(bool wait = false);
+    Result<std::reference_wrapper<IOUringCQE>, int>
+    get_completion_entry(bool wait = true);
+
+    /// \brief Alias for NO_WAIT get_completion_entry
+    /// \see get_completion_entry
+    Result<std::reference_wrapper<IOUringCQE>, int> peek_completion_entry() {
+        return get_completion_entry(/* wait = */ false);
+    }
 
     /// \brief Submit SQEs acquired from \c get_submission_entry to the kernel
-    /// If \c wait > 0, allows waiting for events as well.
+    /// If \c nr_wait > 0, allows waiting for events as well.
     /// Default behavisor is no wait.
     ///
-    /// \param wait 
+    /// \param nr_wait 
     /// \return the number of SQEs submitted or \c errno
-    Result<int, int> submit(std::size_t wait = 0);
+    Result<int, int> submit(std::size_t nr_wait = 0);
 
     /// \brief 
     ///

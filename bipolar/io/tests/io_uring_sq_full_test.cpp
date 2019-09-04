@@ -7,9 +7,7 @@
 using namespace bipolar;
 
 TEST(IOUring, SqFull) {
-    struct io_uring_params p;
-    std::memset(&p, 0, sizeof(p));
-
+    struct io_uring_params p{};
     IOUring ring(8, &p);
 
     std::size_t i = 0;

@@ -13,31 +13,39 @@ cc_library(
     name = 'io',
     srcs = [
         'io_uring.cpp',
-        'reactor.cpp',
+        #'reactor.cpp',
     ],
     hdrs = [
         'io_uring.hpp',
-        'reactor.hpp',
+        #'reactor.hpp',
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
     deps = [
         '//bipolar/core:core',
         '@liburing//:liburing',
-        '@boost//:noncopyable',
+        #'@boost//:noncopyable',
     ],
 )
 
 cc_test(
     name = 'io_uring_test',
     srcs = [
-        'tests/sq_full_test.cpp',
-        #'tests/poll.cpp',
+        'tests/io_uring_nop_test.cpp',
+        'tests/io_uring_sq_full_test.cpp',
+        'tests/io_uring_cq_full_test.cpp',
+        'tests/io_uring_submit_wait_test.cpp',
+        'tests/io_uring_eagain_test.cpp',
+        'tests/io_uring_fsync_test.cpp',
+        'tests/io_uring_link_test.cpp',
+        'tests/io_uring_poll_test.cpp',
+        'tests/io_uring_poll_cancel_test.cpp',
     ],
     copts = BIPOLAR_TEST_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
     deps = [
         ':io',
+        '@boost//:scope_exit',
         '@gtest//:gtest_main',
     ],
 )

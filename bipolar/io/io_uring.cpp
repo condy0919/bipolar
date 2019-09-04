@@ -9,11 +9,14 @@
 
 #include <cerrno>
 #include <cstring>
+#include <cassert>
 #include <system_error>
 
 
 namespace bipolar {
 IOUringSQ::IOUringSQ(int fd, const struct io_uring_params* p) {
+    assert(p);
+
     ring_sz_ = p->sq_off.array + p->sq_entries * sizeof(std::uint32_t);
     ring_ptr_ = mmap(0, ring_sz_, PROT_READ | PROT_WRITE,
                      MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQ_RING);
@@ -47,6 +50,8 @@ IOUringSQ::~IOUringSQ() {
 }
 
 IOUringCQ::IOUringCQ(int fd, const struct io_uring_params* p) {
+    assert(p);
+
     ring_sz_ = p->cq_off.cqes + p->cq_entries * sizeof(IOUringCQE);
     ring_ptr_ = mmap(0, ring_sz_, PROT_READ | PROT_WRITE,
                      MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_CQ_RING);
@@ -68,9 +73,8 @@ IOUringCQ::~IOUringCQ() {
 }
 
 IOUring::IOUring(unsigned entries, struct io_uring_params* p)
-    : ring_fd_(io_uring_setup(entries, p)), flags_(p->flags),
-      sq_(ring_fd_, p), cq_(ring_fd_, p) {
-}
+    : ring_fd_(io_uring_setup(entries, (assert(p), p))), // a tricky assert
+      flags_(p->flags), sq_(ring_fd_, p), cq_(ring_fd_, p) {}
 
 IOUring::~IOUring() {
     close(ring_fd_);
@@ -131,13 +135,13 @@ IOUring::get_submission_entry() {
     return Ok(std::ref(sqe));
 }
 
-Result<Option<std::reference_wrapper<IOUringCQE>>, int>
+Result<std::reference_wrapper<IOUringCQE>, int>
 IOUring::get_completion_entry(bool wait) {
     for (;;) {
         const std::uint32_t head = *cq_.khead_;
 
         if (__atomic_load_n(cq_.ktail_, __ATOMIC_ACQUIRE) != head) {
-            return Ok(Some(std::ref(cq_.cqes_[head & *cq_.kring_mask_])));
+            return Ok(std::ref(cq_.cqes_[head & *cq_.kring_mask_]));
         }
 
         if (!wait) {
@@ -174,8 +178,7 @@ Result<int, int> IOUring::submit(std::size_t wait) {
     // Ensure that kernel sees the SQE updates before it sees the tail update
     __atomic_store_n(sq_.ktail_, ktail, __ATOMIC_RELEASE);
 
-    unsigned flags = 0;
-    if (wait || needs_enter(flags)) {
+    if (unsigned flags = 0; wait || needs_enter(flags)) {
         if (wait) {
             if (wait > submitted) {
                 wait = submitted;
