@@ -1601,12 +1601,4 @@ inline bool operator>=(const Err<E>& lhs, const Result<T, E>& rhs) noexcept {
 
 } // namespace bipolar
 
-namespace std {
-template <typename T, typename E>
-void swap(bipolar::Result<T, E>& lhs,
-          bipolar::Result<T, E>& rhs) noexcept(noexcept(lhs.swap(rhs))) {
-    lhs.swap(rhs);
-}
-} // namespace std
-
 #endif

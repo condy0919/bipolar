@@ -866,12 +866,6 @@ constexpr bool operator>=(detail::None, const Option<T>& rhs) {
 
 namespace std {
 template <typename T>
-void swap(bipolar::Option<T>& lhs,
-          bipolar::Option<T>& rhs) noexcept(noexcept(lhs.swap(rhs))) {
-    lhs.swap(rhs);
-}
-
-template <typename T>
 struct hash<bipolar::Option<T>> {
     std::size_t operator()(const bipolar::Option<T>& opt) const {
         if (!opt.has_value()) {
