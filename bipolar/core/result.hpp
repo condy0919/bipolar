@@ -12,6 +12,18 @@
 #include <type_traits>
 #include <utility>
 
+/// \brief Macro sugar for unwraping a \c Result. Early return when \c Err state
+///
+/// \param expr of Result\<T, E\> return type
+#define BIPOLAR_TRY(expr)                                                      \
+    ({                                                                         \
+        static_assert(::bipolar::detail::is_result_v<decltype((expr))>);       \
+        auto result = (expr);                                                  \
+        if (!bool(result)) {                                                   \
+            return result;                                                     \
+        }                                                                      \
+        ::std::move(result.value());                                           \
+    })
 
 namespace bipolar {
 template <typename T, typename E>
