@@ -1,5 +1,3 @@
-/// \file io_uring.cpp
-
 #include "bipolar/io/io_uring.hpp"
 
 #include <sys/types.h>
