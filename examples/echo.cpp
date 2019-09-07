@@ -12,7 +12,6 @@
 #define MAX_CONN 1000
 #define MAX_MSG 1000
 #define PORT 9999
-#define HOST "127.0.0.1"
 
 using namespace bipolar;
 
@@ -24,7 +23,6 @@ const std::uint64_t LISTEN = 0, ECHO_RECV = 1, ECHO_SEND = 2, ECHO = 3;
 
 struct Connection {
     int fd;
-    struct msghdr msg[2];
     struct iovec iov[2];
     char buf[MAX_MSG];
 };
@@ -40,18 +38,14 @@ int main() {
         // RX
         conns[i].iov[RX].iov_base = conns[i].buf;
         conns[i].iov[RX].iov_len = MAX_MSG;
-        conns[i].msg[RX].msg_iov = &conns[i].iov[RX];
-        conns[i].msg[RX].msg_iovlen = 1;
 
         // TX
         conns[i].iov[TX].iov_base = conns[i].buf;
         conns[i].iov[TX].iov_len = 0;
-        conns[i].msg[TX].msg_iov = &conns[i].iov[TX];
-        conns[i].msg[TX].msg_iovlen = 1;
     }
 
-    struct io_uring_params p {};
-    IOUring ring(200, &p);
+    struct io_uring_params p{};
+    IOUring ring(512, &p);
 
     struct sockaddr_in saddr;
     std::memset(&saddr, 0, sizeof(saddr));
@@ -128,20 +122,9 @@ int main() {
 
         case ECHO:
             if ((cqe.res & POLLIN) == POLLIN) {
-                // const int fd = value;
-                // int sz = read(fd, conns[fd].buf, MAX_MSG);
-                // write(fd, conns[fd].buf, sz);
-                //
-                // ring.get_submission_entry().and_then(
-                //     [fd](IOUringSQE& sqe) -> Result<Void, Void> {
-                //         sqe.poll_add(fd, POLLIN);
-                //         sqe.user_data = TYPE_VALUE(ECHO, fd);
-                //         return Ok(Void{});
-                //     });
-
                 ring.get_submission_entry().and_then(
                     [fd = value](IOUringSQE& sqe) -> Result<Void, Void> {
-                        sqe.recvmsg(fd, &conns[fd].msg[RX], 1);
+                        sqe.readv(fd, &conns[fd].iov[RX], 1, 0);
                         sqe.user_data = TYPE_VALUE(ECHO_RECV, fd);
                         return Ok(Void{});
                     });
@@ -152,11 +135,11 @@ int main() {
             if (cqe.res == -1 || cqe.res == 0) {
                 close(value);
             } else {
-                // std::puts("ECHO_RECV: sendmsg submited");
+                std::puts("ECHO_RECV: sendmsg submited");
                 conns[value].iov[TX].iov_len = cqe.res;
                 ring.get_submission_entry().and_then(
                     [fd = value](IOUringSQE& sqe) -> Result<Void, Void> {
-                        sqe.sendmsg(fd, &conns[fd].msg[TX], 1);
+                        sqe.writev(fd, &conns[fd].iov[TX], 1, 0);
                         sqe.user_data = TYPE_VALUE(ECHO_SEND, fd);
                         return Ok(Void{});
                     });
@@ -164,7 +147,7 @@ int main() {
             break;
 
         case ECHO_SEND:
-            // std::puts("ECHO_SEND: poll client_fd submited");
+            std::puts("ECHO_SEND: poll client_fd submited");
             ring.get_submission_entry().and_then(
                 [fd = value](IOUringSQE& sqe) -> Result<Void, Void> {
                     sqe.poll_add(fd, POLLIN);
