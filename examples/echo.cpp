@@ -109,7 +109,7 @@ int main() {
                         break;
                     }
 
-                    std::puts("LISTEN: poll client_fd submited");
+                    std::puts("LISTEN: poll client_fd submitted");
                     ring.get_submission_entry().and_then(
                         [fd](IOUringSQE& sqe) -> Result<Void, Void> {
                             sqe.poll_add(fd, POLLIN);
@@ -122,6 +122,7 @@ int main() {
 
         case ECHO:
             if ((cqe.res & POLLIN) == POLLIN) {
+                std::puts("ECHO: readv submitted");
                 ring.get_submission_entry().and_then(
                     [fd = value](IOUringSQE& sqe) -> Result<Void, Void> {
                         sqe.readv(fd, &conns[fd].iov[RX], 1, 0);
@@ -135,7 +136,7 @@ int main() {
             if (cqe.res == -1 || cqe.res == 0) {
                 close(value);
             } else {
-                std::puts("ECHO_RECV: sendmsg submited");
+                std::puts("ECHO_RECV: writev submitted");
                 conns[value].iov[TX].iov_len = cqe.res;
                 ring.get_submission_entry().and_then(
                     [fd = value](IOUringSQE& sqe) -> Result<Void, Void> {
@@ -147,7 +148,7 @@ int main() {
             break;
 
         case ECHO_SEND:
-            std::puts("ECHO_SEND: poll client_fd submited");
+            std::puts("ECHO_SEND: poll client_fd submitted");
             ring.get_submission_entry().and_then(
                 [fd = value](IOUringSQE& sqe) -> Result<Void, Void> {
                     sqe.poll_add(fd, POLLIN);
