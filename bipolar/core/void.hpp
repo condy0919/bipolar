@@ -20,22 +20,22 @@ struct Void {
     explicit constexpr Void(T&&) noexcept {}
 };
 
-constexpr bool operator==(Void, Void) noexcept {
+inline constexpr bool operator==(Void, Void) noexcept {
     return true;
 }
-constexpr bool operator!=(Void, Void) noexcept {
+inline constexpr bool operator!=(Void, Void) noexcept {
     return false;
 }
-constexpr bool operator<(Void, Void) noexcept {
+inline constexpr bool operator<(Void, Void) noexcept {
     return false;
 }
-constexpr bool operator<=(Void, Void) noexcept {
+inline constexpr bool operator<=(Void, Void) noexcept {
     return true;
 }
-constexpr bool operator>=(Void, Void) noexcept {
+inline constexpr bool operator>=(Void, Void) noexcept {
     return true;
 }
-constexpr bool operator>(Void, Void) noexcept {
+inline constexpr bool operator>(Void, Void) noexcept {
     return false;
 }
 

@@ -752,7 +752,7 @@ void swap(Option<T>& lhs, Option<T>& rhs) noexcept(noexcept(lhs.swap(rhs))) {
 /// @{
 /// \brief Comparison with others
 template <typename T>
-constexpr bool operator==(const Option<T>& lhs, const Option<T>& rhs) {
+inline constexpr bool operator==(const Option<T>& lhs, const Option<T>& rhs) {
     if (lhs.has_value() != rhs.has_value()) {
         return false;
     }
@@ -763,12 +763,12 @@ constexpr bool operator==(const Option<T>& lhs, const Option<T>& rhs) {
 }
 
 template <typename T>
-constexpr bool operator!=(const Option<T>& lhs, const Option<T>& rhs) {
+inline constexpr bool operator!=(const Option<T>& lhs, const Option<T>& rhs) {
     return !(lhs == rhs);
 }
 
 template <typename T>
-constexpr bool operator<(const Option<T>& lhs, const Option<T>& rhs) {
+inline constexpr bool operator<(const Option<T>& lhs, const Option<T>& rhs) {
     if (lhs.has_value() != rhs.has_value()) {
         return lhs.has_value() < rhs.has_value();
     }
@@ -779,17 +779,17 @@ constexpr bool operator<(const Option<T>& lhs, const Option<T>& rhs) {
 }
 
 template <typename T>
-constexpr bool operator>(const Option<T>& lhs, const Option<T>& rhs) {
+inline constexpr bool operator>(const Option<T>& lhs, const Option<T>& rhs) {
     return rhs < lhs;
 }
 
 template <typename T>
-constexpr bool operator<=(const Option<T>& lhs, const Option<T>& rhs) {
+inline constexpr bool operator<=(const Option<T>& lhs, const Option<T>& rhs) {
     return !(lhs > rhs);
 }
 
 template <typename T>
-constexpr bool operator>=(const Option<T>& lhs, const Option<T>& rhs) {
+inline constexpr bool operator>=(const Option<T>& lhs, const Option<T>& rhs) {
     return !(lhs < rhs);
 }
 /// @}
@@ -797,67 +797,67 @@ constexpr bool operator>=(const Option<T>& lhs, const Option<T>& rhs) {
 /// @{
 /// \brief Comparison with None type, where None is the rhs
 template <typename T>
-constexpr bool operator==(const Option<T>& lhs, detail::None) {
+inline constexpr bool operator==(const Option<T>& lhs, detail::None) noexcept {
     return !lhs.has_value();
 }
 
 template <typename T>
-constexpr bool operator!=(const Option<T>& lhs, detail::None) {
+inline constexpr bool operator!=(const Option<T>& lhs, detail::None) noexcept {
     return lhs.has_value();
 }
 
 template <typename T>
-constexpr bool operator<(const Option<T>& lhs, detail::None) {
+inline constexpr bool operator<(const Option<T>& lhs, detail::None) noexcept {
     (void)lhs;
     return false;
 }
 
 template <typename T>
-constexpr bool operator>(const Option<T>& lhs, detail::None) {
+inline constexpr bool operator>(const Option<T>& lhs, detail::None) noexcept {
     return lhs.has_value();
 }
 
 template <typename T>
-constexpr bool operator<=(const Option<T>& lhs, detail::None) {
+inline constexpr bool operator<=(const Option<T>& lhs, detail::None) noexcept {
     return !lhs.has_value();
 }
 
 template <typename T>
-constexpr bool operator>=(const Option<T>& lhs, detail::None) {
+inline constexpr bool operator>=(const Option<T>& lhs, detail::None) noexcept {
     (void)lhs;
     return true;
 }
 
 /// \brief Comparison with None type, where None is the lhs
 template <typename T>
-constexpr bool operator==(detail::None, const Option<T>& rhs) {
+inline constexpr bool operator==(detail::None, const Option<T>& rhs) noexcept {
     return !rhs.has_value();
 }
 
 template <typename T>
-constexpr bool operator!=(detail::None, const Option<T>& rhs) {
+inline constexpr bool operator!=(detail::None, const Option<T>& rhs) noexcept {
     return rhs.has_value();
 }
 
 template <typename T>
-constexpr bool operator<(detail::None, const Option<T>& rhs) {
+inline constexpr bool operator<(detail::None, const Option<T>& rhs) noexcept {
     return rhs.has_value();
 }
 
 template <typename T>
-constexpr bool operator>(detail::None, const Option<T>& rhs) {
+inline constexpr bool operator>(detail::None, const Option<T>& rhs) noexcept {
     (void)rhs;
     return false;
 }
 
 template <typename T>
-constexpr bool operator<=(detail::None, const Option<T>& rhs) {
+inline constexpr bool operator<=(detail::None, const Option<T>& rhs) noexcept {
     (void)rhs;
     return true;
 }
 
 template <typename T>
-constexpr bool operator>=(detail::None, const Option<T>& rhs) {
+inline constexpr bool operator>=(detail::None, const Option<T>& rhs) noexcept {
     return !rhs.has_value();
 }
 /// @}

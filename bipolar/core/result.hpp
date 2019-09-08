@@ -1387,7 +1387,8 @@ template <
     typename T, typename E,
     std::enable_if_t<is_equality_comparable_v<T> && is_equality_comparable_v<E>,
                      int> = 0>
-inline bool operator==(const Result<T, E>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator==(const Result<T, E>& lhs,
+                                 const Result<T, E>& rhs) {
     if (lhs.has_value() && rhs.has_value()) {
         return lhs.value() == rhs.value();
     } else if (lhs.has_error() == rhs.has_error()) {
@@ -1400,15 +1401,17 @@ template <
     typename T, typename E,
     std::enable_if_t<is_equality_comparable_v<T> && is_equality_comparable_v<E>,
                      int> = 0>
-inline bool operator!=(const Result<T, E>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator!=(const Result<T, E>& lhs,
+                                 const Result<T, E>& rhs) {
     return !(lhs == rhs);
 }
 
 template <
     typename T, typename E,
-    std::enable_if_t<is_less_than_comparable_v<T> && is_less_than_comparable_v<E>,
-                     int> = 0>
-inline bool operator<(const Result<T, E>& lhs, const Result<T, E>& rhs) noexcept {
+    std::enable_if_t<
+        is_less_than_comparable_v<T> && is_less_than_comparable_v<E>, int> = 0>
+inline constexpr bool operator<(const Result<T, E>& lhs,
+                                const Result<T, E>& rhs) {
     if (lhs.has_value()) {
         if (rhs.has_value()) {
             return lhs.value() < rhs.value();
@@ -1426,25 +1429,28 @@ inline bool operator<(const Result<T, E>& lhs, const Result<T, E>& rhs) noexcept
 
 template <
     typename T, typename E,
-    std::enable_if_t<is_less_than_comparable_v<T> && is_less_than_comparable_v<E>,
-                     int> = 0>
-inline bool operator<=(const Result<T, E>& lhs, const Result<T, E>& rhs) noexcept {
+    std::enable_if_t<
+        is_less_than_comparable_v<T> && is_less_than_comparable_v<E>, int> = 0>
+inline constexpr bool operator<=(const Result<T, E>& lhs,
+                                 const Result<T, E>& rhs) {
     return !(rhs < lhs);
 }
 
 template <
     typename T, typename E,
-    std::enable_if_t<is_less_than_comparable_v<T> && is_less_than_comparable_v<E>,
-                     int> = 0>
-inline bool operator>(const Result<T, E>& lhs, const Result<T, E>& rhs) noexcept {
+    std::enable_if_t<
+        is_less_than_comparable_v<T> && is_less_than_comparable_v<E>, int> = 0>
+inline constexpr bool operator>(const Result<T, E>& lhs,
+                                const Result<T, E>& rhs) {
     return rhs < lhs;
 }
 
 template <
     typename T, typename E,
-    std::enable_if_t<is_less_than_comparable_v<T> && is_less_than_comparable_v<E>,
-                     int> = 0>
-inline bool operator>=(const Result<T, E>& lhs, const Result<T, E>& rhs) noexcept {
+    std::enable_if_t<
+        is_less_than_comparable_v<T> && is_less_than_comparable_v<E>, int> = 0>
+inline constexpr bool operator>=(const Result<T, E>& lhs,
+                                 const Result<T, E>& rhs) {
     return !(lhs < rhs);
 }
 /// @}
@@ -1455,37 +1461,37 @@ inline bool operator>=(const Result<T, E>& lhs, const Result<T, E>& rhs) noexcep
 /// \c Ok is in the right
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<T>, int> = 0>
-inline bool operator==(const Result<T, E>& lhs, const Ok<T>& rhs) noexcept {
+inline constexpr bool operator==(const Result<T, E>& lhs, const Ok<T>& rhs) {
     return lhs.has_value() && lhs.value() == rhs.value;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<T>, int> = 0>
-inline bool operator!=(const Result<T, E>& lhs, const Ok<T>& rhs) noexcept {
+inline constexpr bool operator!=(const Result<T, E>& lhs, const Ok<T>& rhs) {
     return !(lhs == rhs);
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline bool operator<(const Result<T, E>& lhs, const Ok<T>& rhs) noexcept {
+inline constexpr bool operator<(const Result<T, E>& lhs, const Ok<T>& rhs) {
     return lhs.has_error() || lhs.value() < rhs.value;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline bool operator<=(const Result<T, E>& lhs, const Ok<T>& rhs) noexcept {
+inline constexpr bool operator<=(const Result<T, E>& lhs, const Ok<T>& rhs) {
     return lhs.has_error() || lhs.value() <= rhs.value;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline bool operator>(const Result<T, E>& lhs, const Ok<T>& rhs) noexcept {
+inline constexpr bool operator>(const Result<T, E>& lhs, const Ok<T>& rhs) {
     return lhs.has_value() && lhs.value() > rhs.value;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline bool operator>=(const Result<T, E>& lhs, const Ok<T>& rhs) noexcept {
+inline constexpr bool operator>=(const Result<T, E>& lhs, const Ok<T>& rhs) {
     return lhs.has_value() && lhs.value() >= rhs.value;
 }
 /// @}
@@ -1495,37 +1501,37 @@ inline bool operator>=(const Result<T, E>& lhs, const Ok<T>& rhs) noexcept {
 /// \c Ok is in the left
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<T>, int> = 0>
-inline bool operator==(const Ok<T>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator==(const Ok<T>& lhs, const Result<T, E>& rhs) {
     return rhs == lhs;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<T>, int> = 0>
-inline bool operator!=(const Ok<T>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator!=(const Ok<T>& lhs, const Result<T, E>& rhs) {
     return rhs != lhs;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline bool operator<(const Ok<T>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator<(const Ok<T>& lhs, const Result<T, E>& rhs) {
     return rhs > lhs;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline bool operator<=(const Ok<T>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator<=(const Ok<T>& lhs, const Result<T, E>& rhs) {
     return rhs >= lhs;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline bool operator>(const Ok<T>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator>(const Ok<T>& lhs, const Result<T, E>& rhs) {
     return rhs < lhs;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline bool operator>=(const Ok<T>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator>=(const Ok<T>& lhs, const Result<T, E>& rhs) {
     return rhs <= lhs;
 }
 /// @}
@@ -1536,37 +1542,37 @@ inline bool operator>=(const Ok<T>& lhs, const Result<T, E>& rhs) noexcept {
 /// \c Err is in the right
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<E>, int> = 0>
-inline bool operator==(const Result<T, E>& lhs, const Err<E>& rhs) noexcept {
+inline constexpr bool operator==(const Result<T, E>& lhs, const Err<E>& rhs) {
     return lhs.has_error() && lhs.error() == rhs.value;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<E>, int> = 0>
-inline bool operator!=(const Result<T, E>& lhs, const Err<E>& rhs) noexcept {
+inline constexpr bool operator!=(const Result<T, E>& lhs, const Err<E>& rhs) {
     return !(lhs == rhs);
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline bool operator<(const Result<T, E>& lhs, const Err<E>& rhs) noexcept {
+inline constexpr bool operator<(const Result<T, E>& lhs, const Err<E>& rhs) {
     return lhs.has_error() && lhs.error() < rhs.value;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline bool operator<=(const Result<T, E>& lhs, const Err<E>& rhs) noexcept {
+inline constexpr bool operator<=(const Result<T, E>& lhs, const Err<E>& rhs) {
     return lhs.has_error() && lhs.error() <= rhs.value;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline bool operator>(const Result<T, E>& lhs, const Err<E>& rhs) noexcept {
+inline constexpr bool operator>(const Result<T, E>& lhs, const Err<E>& rhs) {
     return lhs.has_value() || lhs.error() > rhs.value;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline bool operator>=(const Result<T, E>& lhs, const Err<E>& rhs) noexcept {
+inline constexpr bool operator>=(const Result<T, E>& lhs, const Err<E>& rhs) {
     return lhs.has_value() || lhs.error() >= rhs.value;
 }
 /// @}
@@ -1576,37 +1582,37 @@ inline bool operator>=(const Result<T, E>& lhs, const Err<E>& rhs) noexcept {
 /// \c Err is in the left
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<E>, int> = 0>
-inline bool operator==(const Err<E>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator==(const Err<E>& lhs, const Result<T, E>& rhs) {
     return rhs == lhs;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<E>, int> = 0>
-inline bool operator!=(const Err<E>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator!=(const Err<E>& lhs, const Result<T, E>& rhs) {
     return rhs != lhs;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline bool operator<(const Err<E>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator<(const Err<E>& lhs, const Result<T, E>& rhs) {
     return rhs > lhs;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline bool operator<=(const Err<E>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator<=(const Err<E>& lhs, const Result<T, E>& rhs) {
     return rhs >= lhs;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline bool operator>(const Err<E>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator>(const Err<E>& lhs, const Result<T, E>& rhs) {
     return rhs < lhs;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline bool operator>=(const Err<E>& lhs, const Result<T, E>& rhs) noexcept {
+inline constexpr bool operator>=(const Err<E>& lhs, const Result<T, E>& rhs) {
     return rhs <= lhs;
 }
 /// @}
