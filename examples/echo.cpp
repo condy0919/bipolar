@@ -156,7 +156,7 @@ int main() {
                 });
         }
 
-        ring.submit();
+        ring.submit(1);
         ring.seen(1);
     }
 
