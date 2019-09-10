@@ -1,9 +1,9 @@
-#ifndef BIPOLAR_CORE_TRAITS_HPP_
-#define BIPOLAR_CORE_TRAITS_HPP_
-
 /// \file traits.hpp
 /// \see https://en.cppreference.com/w/cpp/header/concepts
 /// Backports some concepts in old style for compatibility
+
+#ifndef BIPOLAR_CORE_TRAITS_HPP_
+#define BIPOLAR_CORE_TRAITS_HPP_
 
 #include <type_traits>
 

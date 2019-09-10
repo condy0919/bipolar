@@ -1,8 +1,7 @@
-#ifndef BIPOLAR_CORE_OPTION_HPP_
-#define BIPOLAR_CORE_OPTION_HPP_
-
 /// \file option.hpp
 
+#ifndef BIPOLAR_CORE_OPTION_HPP_
+#define BIPOLAR_CORE_OPTION_HPP_
 
 #include <new>
 #include <cassert>

@@ -1,7 +1,7 @@
+/// \file result.hpp
+
 #ifndef BIPOLAR_CORE_RESULT_HPP_
 #define BIPOLAR_CORE_RESULT_HPP_
-
-/// \file result.hpp
 
 #include "bipolar/core/void.hpp"
 #include "bipolar/core/traits.hpp"
