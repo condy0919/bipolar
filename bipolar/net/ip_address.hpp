@@ -189,7 +189,7 @@ public:
     /// assert(!v6.is_loopback());
     ///
     /// auto localhost = IPv6Address::from_str("::1").value();
-	/// assert(localhost.is_loopback());
+    /// assert(localhost.is_loopback());
     /// ```
     constexpr bool is_loopback() const noexcept {
         return addr_.addr32[0] == 0 && addr_.addr32[1] == 0 &&
@@ -437,7 +437,7 @@ public:
 
     /// \brief Converts this address to an IPv4-mapped [IPv6 address]
     ///
-    /// a.b.c.d becomes: :ffff:a.b.c.d
+    /// a.b.c.d becomes: ::ffff:a.b.c.d
     IPv6Address to_ipv6_mapped() const noexcept {
         return IPv6Address(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff,
                            addr_.addr8[0], addr_.addr8[1], addr_.addr8[2],
