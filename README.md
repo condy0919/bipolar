@@ -11,11 +11,11 @@
 [bazel](https://github.com/bazelbuild/bazel/) is required to build and run tests/benchmarks.
 
 ```bash
-bazel build //:bipolar
+bazel build ...
 ```
 to build the project.
 
 ```bash
-bazel test //tests:all
+bazel test ...
 ```
 to run tests.

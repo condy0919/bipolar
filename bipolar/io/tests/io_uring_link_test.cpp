@@ -12,7 +12,9 @@
 using namespace bipolar;
 
 TEST(IOUring, SingleLink) {
-    struct io_uring_params p{};
+    struct io_uring_params p{
+        .flags = IORING_SETUP_IOPOLL,
+    };
 
     IOUring ring(8, &p);
 
@@ -41,7 +43,9 @@ TEST(IOUring, SingleLink) {
 }
 
 TEST(IOUring, DoubleLink) {
-    struct io_uring_params p{};
+    struct io_uring_params p{
+        .flags = IORING_SETUP_IOPOLL,
+    };
 
     IOUring ring(8, &p);
 
@@ -77,7 +81,9 @@ TEST(IOUring, DoubleLink) {
 }
 
 TEST(IOUring, DoubleChain) {
-    struct io_uring_params p{};
+    struct io_uring_params p{
+        .flags = IORING_SETUP_IOPOLL,
+    };
 
     IOUring ring(8, &p);
 
@@ -118,39 +124,41 @@ TEST(IOUring, DoubleChain) {
     }
 }
 
-// TEST(IOUring, SingleLinkFail) {
-//     struct io_uring_params p{};
-//
-//     IOUring ring(8, &p);
-//
-//     auto sub_res = ring.get_submission_entry();
-//     EXPECT_TRUE(bool(sub_res));
-//
-//     IOUringSQE& sqe = sub_res.value();
-//     sqe.nop();
-//     sqe.flags |= IOSQE_IO_LINK;
-//
-//     sub_res = ring.get_submission_entry();
-//     EXPECT_TRUE(bool(sub_res));
-//
-//     IOUringSQE& sqe2 = sub_res.value();
-//     sqe2.nop();
-//
-//     auto res = ring.submit();
-//     EXPECT_TRUE(bool(res));
-//
-//     for (std::size_t i = 0; i < 2; ++i) {
-//         auto cpl_res = ring.peek_completion_entry();
-//         EXPECT_TRUE(bool(cpl_res));
-//
-//         IOUringCQE& cqe = cpl_res.value();
-//
-//         if (i == 0) {
-//             EXPECT_EQ(cqe.res, -EINVAL);
-//         } else if (i == 1) {
-//             EXPECT_EQ(cqe.res, -ECANCELED);
-//         }
-//
-//         ring.seen(1);
-//     }
-// }
+TEST(IOUring, SingleLinkFail) {
+    struct io_uring_params p{
+        .flags = IORING_SETUP_IOPOLL,
+    };
+
+    IOUring ring(8, &p);
+
+    auto sub_res = ring.get_submission_entry();
+    EXPECT_TRUE(bool(sub_res));
+
+    IOUringSQE& sqe = sub_res.value();
+    sqe.nop();
+    sqe.flags |= IOSQE_IO_LINK;
+
+    auto sub_res2 = ring.get_submission_entry();
+    EXPECT_TRUE(bool(sub_res2));
+
+    IOUringSQE& sqe2 = sub_res2.value();
+    sqe2.nop();
+
+    auto res = ring.submit();
+    EXPECT_TRUE(bool(res));
+
+    for (std::size_t i = 0; i < 2; ++i) {
+        auto cpl_res = ring.peek_completion_entry();
+        EXPECT_TRUE(bool(cpl_res));
+
+        IOUringCQE& cqe = cpl_res.value();
+
+        if (i == 0) {
+            EXPECT_EQ(cqe.res, -EINVAL);
+        } else if (i == 1) {
+            EXPECT_EQ(cqe.res, -ECANCELED);
+        }
+
+        ring.seen(1);
+    }
+}

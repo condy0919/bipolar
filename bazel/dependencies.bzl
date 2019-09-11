@@ -28,7 +28,7 @@ def _com_github_axboe_liburing():
     new_git_repository(
         name = 'liburing',
         remote = 'https://github.com/axboe/liburing',
-        commit = '6e9dd0c8c50b5988a0c77532c9c2bd6afd4790d2',
+        commit = '164e9cb455c004c86c2c241c39481fc6b136ca9c',
         build_file = '@bipolar//bazel/external:liburing.BUILD'
     )
 

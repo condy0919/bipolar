@@ -71,7 +71,13 @@ IOUringCQ::~IOUringCQ() {
 }
 
 IOUring::IOUring(unsigned entries, struct io_uring_params* p)
-    : ring_fd_(io_uring_setup(entries, (assert(p), p))), // a tricky assert
+    : ring_fd_(({
+          int ret = io_uring_setup(entries, (assert(p), p)); // a tricky assert
+          if (ret == -1) {
+              throw std::system_error(errno, std::system_category());
+          }
+          ret;
+      })),
       flags_(p->flags), sq_(ring_fd_, p), cq_(ring_fd_, p) {}
 
 IOUring::~IOUring() {

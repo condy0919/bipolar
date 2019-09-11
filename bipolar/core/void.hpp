@@ -1,8 +1,7 @@
+/// \file void.hpp
+
 #ifndef BIPOLAR_CORE_VOID_HPP_
 #define BIPOLAR_CORE_VOID_HPP_
-
-
-/// \file void.hpp
 
 namespace bipolar {
 /// \class Void
@@ -20,22 +19,22 @@ struct Void {
     explicit constexpr Void(T&&) noexcept {}
 };
 
-constexpr bool operator==(Void, Void) noexcept {
+inline constexpr bool operator==(Void, Void) noexcept {
     return true;
 }
-constexpr bool operator!=(Void, Void) noexcept {
+inline constexpr bool operator!=(Void, Void) noexcept {
     return false;
 }
-constexpr bool operator<(Void, Void) noexcept {
+inline constexpr bool operator<(Void, Void) noexcept {
     return false;
 }
-constexpr bool operator<=(Void, Void) noexcept {
+inline constexpr bool operator<=(Void, Void) noexcept {
     return true;
 }
-constexpr bool operator>=(Void, Void) noexcept {
+inline constexpr bool operator>=(Void, Void) noexcept {
     return true;
 }
-constexpr bool operator>(Void, Void) noexcept {
+inline constexpr bool operator>(Void, Void) noexcept {
     return false;
 }
 
