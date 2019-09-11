@@ -122,7 +122,7 @@ public:
     constexpr IPv6Address(Ts... u32s) noexcept : addr_(std::uint32_t(u32s)...) {}
 
     /// \brief Creates a new IPv6Address from a \c string_view
-    /// \return \c Ok<IPv6Address> or Err<IPAddressFormatError>
+    /// \note the string should be null-terminated due to inet_pton restriction
     ///
     /// # Examples
     ///
@@ -373,6 +373,7 @@ public:
                            (std::uint32_t(c) << 8) | (std::uint32_t(d)))) {}
 
     /// \brief Creates a new IPv4Address from a \c string_view
+    /// \note the string should be null-terminated due to inet_pton restriction
     ///
     /// # Examples
     ///
@@ -584,6 +585,7 @@ public:
     }
 
     /// \brief Creates a new IPAddress from a \c string_view
+    /// \note the string should be null-terminated due to inet_pton restriction
     ///
     /// # Examples
     ///
