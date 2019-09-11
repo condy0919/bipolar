@@ -5,9 +5,8 @@
 
 #include <cctype>
 #include <numeric>
+#include <charconv>
 #include <algorithm>
-
-#include <boost/lexical_cast.hpp>
 
 namespace bipolar {
 Result<SocketAddress, SocketAddressFormatError>
@@ -34,7 +33,8 @@ SocketAddress::from_str(std::string_view sv) noexcept {
     // the `port_str` will belong to [0, 99999] while `std::uint16_t`
     // belongs to [0, 65535]
     // range checks here
-    const std::uint32_t port = boost::lexical_cast<std::uint32_t>(port_str);
+    std::uint32_t port = 0;
+    std::from_chars(port_str.data(), port_str.data() + port_str.size(), port);
     if (port > std::numeric_limits<std::uint16_t>::max()) {
         return Err(SocketAddressFormatError::INVALID_PORT);
     }
@@ -63,14 +63,17 @@ std::string SocketAddress::str() const {
     if (addr_.is_ipv4()) {
         ret.assign(addr_.str());
         ret.append(1, ':');
-        ret.append(boost::lexical_cast<std::string>(ntoh(port_)));
     } else {
         ret.append(1, '[');
         ret.append(addr_.str());
         ret.append(1, ']');
         ret.append(1, ':');
-        ret.append(boost::lexical_cast<std::string>(ntoh(port_)));
     }
+
+    char buf[6] = "";
+    const auto [p, _] = std::to_chars(buf, buf + sizeof(buf), ntoh(port_));
+    ret.append(buf, p);
+
     return ret;
 }
 } // namespace bipolar

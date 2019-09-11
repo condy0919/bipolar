@@ -23,7 +23,6 @@ cc_library(
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
     deps = [
         '//bipolar/core:core',
-        '@boost//:lexical_cast',
     ],
 )
 
