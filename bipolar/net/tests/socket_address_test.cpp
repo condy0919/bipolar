@@ -59,4 +59,9 @@ TEST(SocketAddress, from_str) {
     auto r9 = SocketAddress::from_str("::1]:8086");
     EXPECT_FALSE(bool(r9));
     EXPECT_EQ(r9.error(), SocketAddressFormatError::INVALID_ADDRESS);
+
+    auto r10 = SocketAddress::from_str(":::8086");
+    EXPECT_TRUE(bool(r10));
+    EXPECT_EQ(r10.value().addr(), IPAddress(IPv6Address()));
+    EXPECT_EQ(r10.value().port(), hton(static_cast<std::uint16_t>(8086)));
 }

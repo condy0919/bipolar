@@ -129,8 +129,9 @@ public:
     ///                               hton(static_cast<std::uint16_t>(1))))));
     /// assert(r2.port() == hton(static_cast<std::uint16_t>(8080)));
     ///
+    /// // It's an exception but not advisable
     /// auto r3 = SocketAddress::from_str("::1:8080");
-    /// assert(r3.has_error());
+    /// assert(r3.has_value());
     ///
     /// auto r4 = SocketAddress::from_str("127.0.0:8080");
     /// assert(r4.has_error());
