@@ -13,7 +13,6 @@
 #include <functional>
 #include <string_view>
 #include <type_traits>
-#include <initializer_list>
 
 #include "bipolar/core/option.hpp"
 #include "bipolar/core/result.hpp"
@@ -281,12 +280,12 @@ inline bool operator!=(const IPv6Address& lhs,
 }
 
 inline bool operator<(const IPv6Address& lhs,
-					  const IPv6Address& rhs) noexcept {
+                      const IPv6Address& rhs) noexcept {
     return lhs.segments() < rhs.segments();
 }
 
 inline bool operator>(const IPv6Address& lhs,
-				      const IPv6Address& rhs) noexcept {
+                      const IPv6Address& rhs) noexcept {
     return rhs < lhs;
 }
 
