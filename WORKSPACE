@@ -8,6 +8,7 @@ git_repository(
     name = 'com_github_nelhage_rules_boost',
     commit = '82ae1790cef07f3fd618592ad227fe2d66fe0b31',
     remote = 'https://github.com/nelhage/rules_boost',
+    shallow_since = "1565011303 -0400",
 )
 
 load('@com_github_nelhage_rules_boost//:boost/boost.bzl', 'boost_deps')
