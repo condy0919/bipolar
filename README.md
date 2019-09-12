@@ -1,3 +1,6 @@
+[![Build Status][circle-badge]][circle-link]
+[![MIT License][license-badge]](LICENSE)
+
 # bipolar
 
 `bipolar` is a nano library aimed at concurrency programming.
@@ -19,3 +22,7 @@ to build the project.
 bazel test ...
 ```
 to run tests.
+
+[circle-badge]: https://circleci.com/gh/condy0919/bipolar.svg?style=svg
+[circle-link]: https://circleci.com/gh/condy0919/bipolar
+[license-badge]: https://img.shields.io/badge/license-MIT-007EC7.svg
