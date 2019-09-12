@@ -1,0 +1,41 @@
+version: 2.1
+
+commands:
+  install-bazel:
+    steps:
+      - run:
+          name: Installing bazel
+          command: |
+            curl -OL https://github.com/bazelbuild/bazel/releases/download/0.29.1/bazel-0.29.1-installer-linux-x86_64.sh
+            chmod +x bazel-0.29.1-installer-linux-x86_64.sh
+            ./bazel-0.29.1-installer-linux-x86_64.sh
+            rm ./bazel-0.29.1-installer-linux-x86_64.sh
+            bazel --version
+  sysinfo:
+    steps:
+      - run:
+          name: System information
+          command: |
+            uname -a
+            gcc --version
+
+jobs:
+  build:
+    docker:
+      - image: gcc:9
+    steps:
+      - sysinfo
+      - install-bazel
+      - checkout
+      - run:
+          name: Building
+          command: bazel build //... -j $(nproc)
+      - run:
+          name: Testing
+          command: bazel test //... -j $(nproc)
+
+workflows:
+  version: 2
+  default_workflow:
+    jobs:
+      - build

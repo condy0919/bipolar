@@ -1,5 +1,6 @@
 #include "bipolar/io/io_uring.hpp"
 
+#include <linux/version.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -15,6 +16,7 @@ using namespace bipolar;
 const std::size_t BLOCKS = 4096;
 const std::size_t PAGE_SIZE = 4096;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
 TEST(IOUring, SubmitWait) {
     auto mem = std::aligned_alloc(PAGE_SIZE, PAGE_SIZE);
     EXPECT_NE(mem, nullptr);
@@ -64,3 +66,4 @@ TEST(IOUring, SubmitWait) {
         offset += PAGE_SIZE;
     }
 }
+#endif

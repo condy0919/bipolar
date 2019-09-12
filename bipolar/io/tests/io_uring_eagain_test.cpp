@@ -1,5 +1,6 @@
 #include "bipolar/io/io_uring.hpp"
 
+#include <linux/version.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -38,6 +39,7 @@ static void close_file_fd(int fd) {
     unlink(FILENAME);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
 TEST(IOUring, Eagain) {
     auto mem = std::aligned_alloc(PAGE_SIZE, PAGE_SIZE);
     EXPECT_NE(mem, nullptr);
@@ -72,3 +74,4 @@ TEST(IOUring, Eagain) {
     IOUringCQE& cqe = peek_res.value();
     EXPECT_EQ(cqe.res, -EAGAIN);
 }
+#endif

@@ -1,5 +1,6 @@
 #include "bipolar/io/io_uring.hpp"
 
+#include <linux/version.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <poll.h>
@@ -19,6 +20,7 @@ struct PollData {
     bool is_cancel;
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
 TEST(IOUring, PollCancel) {
     int pipe1[2];
     EXPECT_EQ(pipe(pipe1), 0);
@@ -85,3 +87,4 @@ TEST(IOUring, PollCancel) {
                            << "failed with " << cqe2.res;
     ring.seen(1);
 }
+#endif
