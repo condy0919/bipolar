@@ -32,7 +32,7 @@ jobs:
           command: bazel build //... -j $(nproc)
       - run:
           name: Testing
-          command: bazel test //... -j $(nproc)
+          command: bazel test //... -j $(nproc) --test_tag_filters='-io_uring'
 
 workflows:
   version: 2

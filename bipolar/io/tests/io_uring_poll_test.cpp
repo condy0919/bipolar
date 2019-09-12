@@ -1,6 +1,5 @@
 #include "bipolar/io/io_uring.hpp"
 
-#include <linux/version.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <poll.h>
@@ -48,7 +47,6 @@ static void polling(int fd) {
     EXPECT_EQ(cqe.res & POLLIN, POLLIN);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
 TEST(IOUring, Poll) {
     int pipe1[2];
     EXPECT_EQ(pipe(pipe1), 0);
@@ -72,4 +70,3 @@ TEST(IOUring, Poll) {
         EXPECT_EQ(ret, 3);
     }
 }
-#endif

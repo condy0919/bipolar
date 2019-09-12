@@ -1,6 +1,5 @@
 #include "bipolar/io/io_uring.hpp"
 
-#include <linux/version.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -18,7 +17,6 @@ const std::size_t PAGE_SIZE = 4096;
 const char* FILENAME = "testfile";
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
 TEST(IOUring, SingleFsync) {
     struct io_uring_params p{};
 
@@ -113,4 +111,3 @@ TEST(IOUring, BarrierFsync) {
         ring.seen(1);
     }
 }
-#endif

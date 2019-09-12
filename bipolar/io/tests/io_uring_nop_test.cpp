@@ -1,14 +1,11 @@
 #include "bipolar/io/io_uring.hpp"
 
-#include <linux/version.h>
-
 #include <cstdio>
 
 #include <gtest/gtest.h>
 
 using namespace bipolar;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
 TEST(IOUring, SingleNop) {
     struct io_uring_params p{};
     IOUring ring(8, &p);
@@ -45,4 +42,3 @@ TEST(IOUring, BarrierNop) {
         ring.seen(1);
     }
 }
-#endif

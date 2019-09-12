@@ -1,6 +1,5 @@
 #include "bipolar/io/io_uring.hpp"
 
-#include <linux/version.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -12,7 +11,6 @@
 
 using namespace bipolar;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
 TEST(IOUring, SingleLink) {
     struct io_uring_params p{
         .flags = IORING_SETUP_IOPOLL,
@@ -164,4 +162,3 @@ TEST(IOUring, SingleLinkFail) {
         ring.seen(1);
     }
 }
-#endif
