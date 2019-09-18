@@ -3,14 +3,16 @@
 #ifndef BIPOLAR_CORE_RESULT_HPP_
 #define BIPOLAR_CORE_RESULT_HPP_
 
+#include <new>
+#include <utility>
+#include <cstdint>
+#include <stdexcept>
+#include <type_traits>
+
 #include "bipolar/core/void.hpp"
 #include "bipolar/core/traits.hpp"
 #include "bipolar/core/option.hpp"
-#include <cstdint>
-#include <new>
-#include <stdexcept>
-#include <type_traits>
-#include <utility>
+
 
 /// \brief Macro sugar for unwraping a \c Result. Early return when \c Err state
 ///
