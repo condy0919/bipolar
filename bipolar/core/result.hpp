@@ -297,7 +297,12 @@ private:
 /// \struct SmallTrivialStorage
 /// \brief Small trivial storage type
 /// For small (pointer-sized) trivial types, a struct is faster than a union
-/// \todo benchmark
+/// Benchmark in `Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz`
+/// 
+/// | Storage |    CPU (ns) |
+/// |---------+-------------|
+/// | struct  | 7.42        |
+/// | union   | 7.81        |
 /// \endinternal
 template <typename T, typename E>
 struct SmallTrivialStorage : Storage<SmallTrivialStorage<T, E>> {
