@@ -18,9 +18,11 @@ class Option;
 
 namespace detail {
 struct None {
-    enum class _secret { _token };
+    enum class Secret {
+        TOKEN,
+    };
 
-    explicit constexpr None(_secret) noexcept {}
+    explicit constexpr None(Secret) noexcept {}
 };
 
 template <typename T>
@@ -48,21 +50,21 @@ public:
 };
 
 /// \brief No value
-constexpr detail::None None{detail::None::_secret::_token};
+constexpr detail::None None{detail::None::Secret::TOKEN};
 
 /// @{
 /// \brief Some value `T`
 /// \return Option\<T\>
 /// \see Option::Option
 template <typename T>
-constexpr Option<T> Some(T&& val) noexcept(
-    std::is_nothrow_move_constructible_v<T>) {
+inline constexpr Option<T>
+Some(T&& val) noexcept(std::is_nothrow_move_constructible_v<T>) {
     return {std::move(val)};
 }
 
 template <typename T>
-constexpr Option<T> Some(const T& val) noexcept(
-    std::is_nothrow_copy_constructible_v<T>) {
+inline constexpr Option<T>
+Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
     return {val};
 }
 /// @}
