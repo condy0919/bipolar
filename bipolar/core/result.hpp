@@ -592,8 +592,8 @@ struct NonTrivialStorage
     }
 
     template <typename U>
-    void assign(U&& rhs) {
-        if constexpr (std::is_same_v<NonTrivialStorage, U>) {
+    constexpr void assign(U&& rhs) {
+        if constexpr (std::is_same_v<std::decay_t<U>, NonTrivialStorage>) {
             if (this == std::addressof(rhs)) {
                 return;
             }
