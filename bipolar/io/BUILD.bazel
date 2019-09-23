@@ -43,6 +43,7 @@ cc_test(
     ],
     copts = BIPOLAR_TEST_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
+    tags = ['io_uring'],
     deps = [
         ':io',
         '@boost//:scope_exit',

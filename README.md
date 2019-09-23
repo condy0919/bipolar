@@ -1,5 +1,6 @@
 [![Build Status][circle-badge]][circle-link]
 [![MIT License][license-badge]](LICENSE)
+[![Language][language-badge]](language-link)
 
 # bipolar
 
@@ -26,3 +27,5 @@ to run tests.
 [circle-badge]: https://circleci.com/gh/condy0919/bipolar.svg?style=svg
 [circle-link]: https://circleci.com/gh/condy0919/bipolar
 [license-badge]: https://img.shields.io/badge/license-MIT-007EC7.svg
+[language-badge]: https://img.shields.io/badge/Language-C%2B%2B17-blue.svg
+[language-link]: https://en.cppreference.com/w/cpp/compiler_support<Paste>

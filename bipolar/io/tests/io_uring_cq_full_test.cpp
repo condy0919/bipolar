@@ -2,8 +2,6 @@
 #include "bipolar/io/io_uring.hpp"
 #undef private
 
-#include <linux/version.h>
-
 #include <cstdio>
 
 #include <gtest/gtest.h>
@@ -22,7 +20,6 @@ static void queue_n_nops(IOUring& ring, std::size_t n) {
     EXPECT_EQ(res.value(), n);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
 TEST(IOUring, CqFull) {
     struct io_uring_params p{};
     IOUring ring(4, &p);
@@ -40,4 +37,3 @@ TEST(IOUring, CqFull) {
     EXPECT_EQ(i, 8);
     EXPECT_EQ(*ring.cq_.koverflow_, 4);
 }
-#endif
