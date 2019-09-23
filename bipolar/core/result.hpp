@@ -35,12 +35,12 @@ class Result;
 /// \see Result
 template <typename T>
 struct Ok {
-    Ok(T&& val) : value(std::move(val)) {}
+    constexpr Ok(T&& val) : value(std::move(val)) {}
 
-    Ok(const T& val) : value(val) {}
+    constexpr Ok(const T& val) : value(val) {}
 
     template <typename E>
-    Result<T, E> into() && {
+    constexpr Result<T, E> into() && {
         return {std::move(*this)};
     }
 
@@ -51,12 +51,12 @@ struct Ok {
 /// \see Result
 template <typename E>
 struct Err {
-    Err(E&& val) : value(std::move(val)) {}
+    constexpr Err(E&& val) : value(std::move(val)) {}
 
-    Err(const E& val) : value(val) {}
+    constexpr Err(const E& val) : value(val) {}
 
     template <typename T>
-    Result<T, E> into() && {
+    constexpr Result<T, E> into() && {
         return {std::move(*this)};
     }
 
@@ -169,7 +169,7 @@ public:
     /// \related NonTrivialStorage
     /// \endinternal
     template <typename... Ts>
-    void assign_value(Ts&&... ts) {
+    constexpr void assign_value(Ts&&... ts) {
         that()->clear();
         that()->which(Which::Value);
         // consider T is const qualified
@@ -189,7 +189,7 @@ public:
     /// \related NonTrivialStorage
     /// \endinternal
     template <typename... Es>
-    void assign_error(Es&&... es) {
+    constexpr void assign_error(Es&&... es) {
         that()->clear();
         that()->which(Which::Error);
         // consider T is const qualified
@@ -204,7 +204,7 @@ public:
     /// \brief Assigns with the others
     /// \endinternal
     template <typename U>
-    void assign(U&& rhs) {
+    constexpr void assign(U&& rhs) {
         switch (rhs.which()) {
         case Which::Value:
             that()->assign_value(std::forward<U>(rhs).value());
@@ -224,7 +224,7 @@ public:
     /// - For \c trivial types, it does nothing
     /// - For \c nontrivial types, it will be overridden
     /// \endinternal
-    void clear() {}
+    constexpr void clear() {}
 
     /// @{
     /// \internal
@@ -366,35 +366,35 @@ struct TrivialStorage : Storage<TrivialStorage<T, E>> {
         : which_(Which::Error), error_(std::forward<Es>(es)...) {}
 };
 
-#define BIPOLAR_TRAIT_ENABLE_GEN(name,                                         \
+// clang-format off
+#define BIPOLAR_TRAIT_ENABLE_GEN(t,                                            \
                                  copy_ctor_noexcept_with_body,                 \
                                  move_ctor_noexcept_with_body,                 \
                                  copy_assign_noexcept_with_body,               \
                                  move_assign_noexcept_with_body)               \
     template <typename Derived, bool, bool Noexcept>                           \
-    struct name {                                                              \
-        constexpr name() noexcept = default;                                   \
-        name(const name& rhs) copy_ctor_noexcept_with_body                     \
-        name(name&& rhs) move_ctor_noexcept_with_body                          \
-        name& operator=(const name& rhs) copy_assign_noexcept_with_body        \
-        name& operator=(name&& rhs) move_assign_noexcept_with_body             \
+    struct t {                                                                 \
+        constexpr t() noexcept = default;                                      \
+        constexpr t(const t& rhs) copy_ctor_noexcept_with_body                 \
+        constexpr t(t&& rhs) move_ctor_noexcept_with_body                      \
+        constexpr t& operator=(const t& rhs) copy_assign_noexcept_with_body    \
+        constexpr t& operator=(t&& rhs) move_assign_noexcept_with_body         \
     };
 
-#define BIPOLAR_TRAIT_DISABLE_GEN(name,                                        \
+#define BIPOLAR_TRAIT_DISABLE_GEN(t,                                           \
                                   copy_ctor_noexcept_with_body,                \
                                   move_ctor_noexcept_with_body,                \
                                   copy_assign_noexcept_with_body,              \
                                   move_assign_noexcept_with_body)              \
     template <typename Derived, bool Noexcept>                                 \
-    struct name<Derived, false, Noexcept> {                                    \
-        constexpr name() noexcept = default;                                   \
-        name(const name&) copy_ctor_noexcept_with_body                         \
-        name(name&&) move_ctor_noexcept_with_body                              \
-        name& operator=(const name&) copy_assign_noexcept_with_body            \
-        name& operator=(name&&) move_assign_noexcept_with_body                 \
+    struct t<Derived, false, Noexcept> {                                       \
+        constexpr t() noexcept = default;                                      \
+        constexpr t(const t&) copy_ctor_noexcept_with_body                     \
+        constexpr t(t&&) move_ctor_noexcept_with_body                          \
+        constexpr t& operator=(const t&) copy_assign_noexcept_with_body        \
+        constexpr t& operator=(t&&) move_assign_noexcept_with_body             \
     };
 
-// clang-format off
 BIPOLAR_TRAIT_ENABLE_GEN(
     CopyConstructible,
     noexcept(Noexcept) {
@@ -488,15 +488,16 @@ struct NonTrivialStorageInner {
         std::is_nothrow_constructible_v<E, Es...>)
         : which_(Which::Error), error_(std::forward<Es>(es)...) {}
 
-    NonTrivialStorageInner(const NonTrivialStorageInner&) {}
+    constexpr NonTrivialStorageInner(const NonTrivialStorageInner&) {}
 
-    NonTrivialStorageInner(NonTrivialStorageInner&&) noexcept {}
+    constexpr NonTrivialStorageInner(NonTrivialStorageInner&&) noexcept {}
 
-    NonTrivialStorageInner& operator=(const NonTrivialStorageInner&) {
+    constexpr NonTrivialStorageInner& operator=(const NonTrivialStorageInner&) {
         return *this;
     }
 
-    NonTrivialStorageInner& operator=(NonTrivialStorageInner&&) noexcept {
+    constexpr NonTrivialStorageInner&
+    operator=(NonTrivialStorageInner&&) noexcept {
         return *this;
     }
 
@@ -541,8 +542,8 @@ struct NonTrivialStorage
     /// \brief Makes it look like a trivial type like \c SmallTrivialStorage
     /// and \c TrivialStorage
     /// \endinternal
-    NonTrivialStorage(const NonTrivialStorage&) = default;
-    NonTrivialStorage(NonTrivialStorage&&) = default;
+    constexpr NonTrivialStorage(const NonTrivialStorage&) = default;
+    constexpr NonTrivialStorage(NonTrivialStorage&&) = default;
     /// @}
 
     /// @{
@@ -550,8 +551,8 @@ struct NonTrivialStorage
     /// \brief Makes it look like a trivial type like \c SmallTrivialStorage
     /// and \c TrivialStorage
     /// \endinternal
-    NonTrivialStorage& operator=(const NonTrivialStorage&) = default;
-    NonTrivialStorage& operator=(NonTrivialStorage&&) = default;
+    constexpr NonTrivialStorage& operator=(const NonTrivialStorage&) = default;
+    constexpr NonTrivialStorage& operator=(NonTrivialStorage&&) = default;
     /// @}
 
     ~NonTrivialStorage() {
@@ -562,7 +563,7 @@ struct NonTrivialStorage
     /// \brief Destructs current value/error
     /// Overrides (actually shadows) the \c Base empty clear
     /// \endinternal
-    void clear() /* override */ {
+    constexpr void clear() /* override */ {
         switch (this->which_) {
         case Which::Value:
             this->value_.~T();
@@ -578,14 +579,14 @@ struct NonTrivialStorage
     }
 
     template <typename... Ts>
-    void assign_value(Ts&&... ts) {
+    constexpr void assign_value(Ts&&... ts) {
         this->clear();
         this->which(Which::Value);
         new ((void*)std::addressof(this->value())) T(std::forward<Ts>(ts)...);
     }
 
     template <typename... Es>
-    void assign_error(Es&&... es) {
+    constexpr void assign_error(Es&&... es) {
         this->clear();
         this->which(Which::Error);
         new ((void*)std::addressof(this->value())) E(std::forward<Es>(es)...);
@@ -673,12 +674,13 @@ public:
     /// ```
     template <bool C = true,
               std::enable_if_t<C && std::is_move_constructible_v<T>, int> = 0>
-    Result(Ok<T>&& ok) noexcept(std::is_nothrow_move_constructible_v<T>)
+    constexpr Result(Ok<T>&& ok) noexcept(
+        std::is_nothrow_move_constructible_v<T>)
         : Base{detail::ValueTag{}, std::move(ok.value)} {}
 
     template <bool C = true,
               std::enable_if_t<C && std::is_copy_constructible_v<T>, int> = 0>
-    Result(const Ok<T>& ok) noexcept(
+    constexpr Result(const Ok<T>& ok) noexcept(
         std::is_nothrow_copy_constructible_v<T>)
         : Base{detail::ValueTag{}, ok.value} {}
     /// @}
@@ -693,13 +695,13 @@ public:
     /// ```
     template <bool C = true,
               std::enable_if_t<C && std::is_move_constructible_v<E>, int> = 0>
-    Result(Err<E>&& err) noexcept(
+    constexpr Result(Err<E>&& err) noexcept(
         std::is_nothrow_move_constructible_v<E>)
         : Base{detail::ErrorTag{}, std::move(err.value)} {}
 
     template <bool C = true,
               std::enable_if_t<C && std::is_copy_constructible_v<E>, int> = 0>
-    Result(const Err<E>& err) noexcept(
+    constexpr Result(const Err<E>& err) noexcept(
         std::is_nothrow_copy_constructible_v<E>)
         : Base{detail::ErrorTag{}, err.value} {}
     /// @}
@@ -717,7 +719,7 @@ public:
                                    std::is_constructible_v<T, X> &&
                                    std::is_constructible_v<E, Y>,
                                int> = 0>
-    Result(const Result<X, Y>& rhs) noexcept(
+    constexpr Result(const Result<X, Y>& rhs) noexcept(
         std::is_nothrow_constructible_v<T, X>&&
             std::is_nothrow_constructible_v<E, Y>)
         : Base{detail::EmptyTag{}} {
@@ -729,7 +731,7 @@ public:
                                    std::is_constructible_v<T, X&&> &&
                                    std::is_constructible_v<E, Y&&>,
                                int> = 0>
-    Result(Result<X, Y>&& rhs) noexcept(
+    constexpr Result(Result<X, Y>&& rhs) noexcept(
         std::is_nothrow_constructible_v<T, X&&>&&
             std::is_nothrow_constructible_v<E, Y&&>)
         : Base{detail::EmptyTag{}} {
@@ -741,27 +743,27 @@ public:
     /// @{
     /// \brief Default constructs from other results
     /// Disabled if \c T or \c E is not \e move-constructible or \e copy-constructible
-    Result(Result&&) = default;
-    Result(const Result&) = default;
+    constexpr Result(Result&&) = default;
+    constexpr Result(const Result&) = default;
     /// @}
 
 
     /// @{
     /// \brief Assigns with others
     /// Disabled if \c T or \c E is not \e move-constructible or \e copy-constructible
-    Result& operator=(Result&&) = default;
-    Result& operator=(const Result&) = default;
+    constexpr Result& operator=(Result&&) = default;
+    constexpr Result& operator=(const Result&) = default;
     /// @}
     
 
     /// @{
     /// \see assign
-    Result& operator=(const Ok<T>& ok) {
+    constexpr Result& operator=(const Ok<T>& ok) {
         Base::assign_value(ok.value);
         return *this;
     }
 
-    Result& operator=(Ok<T>&& ok) {
+    constexpr Result& operator=(Ok<T>&& ok) {
         Base::assign_value(std::move(ok.value));
         return *this;
     }
@@ -770,12 +772,12 @@ public:
 
     /// @{
     /// \see assign
-    Result& operator=(const Err<E>& err) {
+    constexpr Result& operator=(const Err<E>& err) {
         Base::assign_error(err.value);
         return *this;
     }
 
-    Result& operator=(Err<E>&& err) {
+    constexpr Result& operator=(Err<E>&& err) {
         Base::assign_error(std::move(err.value));
         return *this;
     }
@@ -785,11 +787,11 @@ public:
     /// @{
     /// \brief Assigns with \c Ok type
     /// Exports \c assign_value interface
-    void assign(const Ok<T>& ok) {
+    constexpr void assign(const Ok<T>& ok) {
         Base::assign_value(ok.value);
     }
 
-    void assign(Ok<T>&& ok) {
+    constexpr void assign(Ok<T>&& ok) {
         Base::assign_value(std::move(ok.value));
     }
     /// @}
@@ -797,11 +799,11 @@ public:
     /// @{
     /// \brief Assigns with \c Err type
     /// Exports \c assign_error interface
-    void assign(const Err<E>& err) {
+    constexpr void assign(const Err<E>& err) {
         Base::assign_error(err.value);
     }
 
-    void assign(Err<E>&& err) {
+    constexpr void assign(Err<E>&& err) {
         Base::assign_error(std::move(err.value));
     }
     /// @}
@@ -824,13 +826,13 @@ public:
     /// assert(res.has_value() && res.value() == 3);
     /// ```
     template <typename F, typename U = std::invoke_result_t<F, T>>
-    Result<U, E> map(F&& f) const& {
+    constexpr Result<U, E> map(F&& f) const& {
         return has_value() ? Ok(std::forward<F>(f)(value()))
                            : static_cast<Result<U, E>>(Err(error()));
     }
 
     template <typename F, typename U = std::invoke_result_t<F, T>>
-    Result<U, E> map(F&& f) && {
+    constexpr Result<U, E> map(F&& f) && {
         return has_value() ? Ok(std::forward<F>(f)(std::move(value())))
                            : static_cast<Result<U, E>>(Err(std::move(error())));
     }
@@ -861,7 +863,7 @@ public:
     template <typename M, typename F, typename U = std::invoke_result_t<F, T>,
               std::enable_if_t<std::is_same_v<U, std::invoke_result_t<M, E>>,
                                int> = 0>
-    U map_or_else(M&& fallback, F&& f) const& {
+    constexpr U map_or_else(M&& fallback, F&& f) const& {
         return has_value() ? std::forward<F>(f)(value())
                            : std::forward<M>(fallback)(error());
     }
@@ -869,7 +871,7 @@ public:
     template <typename M, typename F, typename U = std::invoke_result_t<F, T>,
               std::enable_if_t<std::is_same_v<U, std::invoke_result_t<M, E>>,
                                int> = 0>
-    U map_or_else(M&& fallback, F&& f) && {
+    constexpr U map_or_else(M&& fallback, F&& f) && {
         return has_value() ? std::forward<F>(f)(std::move(value()))
                            : std::forward<M>(fallback)(std::move(error()));
     }
@@ -893,13 +895,13 @@ public:
     /// assert(res2.has_error() && res2.error() == 4);
     /// ```
     template <typename F, typename U = std::invoke_result_t<F, E>>
-    Result<T, U> map_err(F&& f) const& {
+    constexpr Result<T, U> map_err(F&& f) const& {
         return has_value() ? static_cast<Result<T, U>>(Ok(value()))
                            : Err(std::forward<F>(f)(error()));
     }
 
     template <typename F, typename U = std::invoke_result_t<F, E>>
-    Result<T, U> map_err(F&& f) && {
+    constexpr Result<T, U> map_err(F&& f) && {
         return has_value() ? static_cast<Result<T, U>>(Ok(std::move(value())))
                            : Err(std::forward<F>(f)(std::move(error())));
     }
@@ -932,7 +934,7 @@ public:
               std::enable_if_t<detail::is_result_v<U> &&
                                    std::is_same_v<typename U::error_type, E>,
                                int> = 0>
-    U and_then(F&& f) const& {
+    constexpr U and_then(F&& f) const& {
         return has_value() ? std::forward<F>(f)(value())
                            : static_cast<U>(Err(error()));
     }
@@ -941,7 +943,7 @@ public:
               std::enable_if_t<detail::is_result_v<U> &&
                                    std::is_same_v<typename U::error_type, E>,
                                int> = 0>
-    U and_then(F&& f) && {
+    constexpr U and_then(F&& f) && {
         return has_value() ? std::forward<F>(f)(std::move(value()))
                            : static_cast<U>(Err(std::move(error())));
     }
@@ -974,7 +976,7 @@ public:
               std::enable_if_t<detail::is_result_v<U> &&
                                    std::is_same_v<typename U::value_type, T>,
                                int> = 0>
-    U or_else(F&& f) const& {
+    constexpr U or_else(F&& f) const& {
         return has_value() ? static_cast<U>(Ok(value()))
                            : std::forward<F>(f)(error());
     }
@@ -983,7 +985,7 @@ public:
               std::enable_if_t<detail::is_result_v<U> &&
                                    std::is_same_v<typename U::value_type, T>,
                                int> = 0>
-    U or_else(F&& f) && {
+    constexpr U or_else(F&& f) && {
         return has_value() ? static_cast<U>(Ok(std::move(value())))
                            : std::forward<F>(f)(std::move(error()));
     }
@@ -1007,7 +1009,7 @@ public:
     /// ```
     template <typename U,
               std::enable_if_t<is_equality_comparable_v<T, U>, int> = 0>
-    bool contains(const U& x) const noexcept {
+    constexpr bool contains(const U& x) const noexcept {
         return has_value() ? Base::value() == x : false;
     }
 
@@ -1027,7 +1029,7 @@ public:
     /// ```
     template <typename U,
               std::enable_if_t<is_equality_comparable_v<E, U>, int> = 0>
-    bool contains_err(const U& x) const noexcept {
+    constexpr bool contains_err(const U& x) const noexcept {
         return has_error() ? Base::error() == x : false;
     }
 
@@ -1047,11 +1049,11 @@ public:
     /// const auto opty = y.ok();
     /// assert(!opty.has_value());
     /// ```
-    Option<T> ok() const& {
+    constexpr Option<T> ok() const& {
         return has_value() ? Some(value()) : None;
     }
 
-    Option<T> ok() && {
+    constexpr Option<T> ok() && {
         return has_value() ? Some(std::move(value())) : None;
     }
     /// @}
@@ -1072,11 +1074,11 @@ public:
     /// const auto opty = y.err();
     /// assert(opty.has_value() && opty.value() == 2);
     /// ```
-    Option<E> err() const& {
+    constexpr Option<E> err() const& {
         return has_error() ? Some(error()) : None;
     }
 
-    Option<E> err() && {
+    constexpr Option<E> err() && {
         return has_error() ? Some(std::move(error())) : None;
     }
     /// @}
@@ -1093,7 +1095,7 @@ public:
     /// assert(x.has_value() && x.value() == "foo");
     /// ```
     template <typename... Args>
-    T& emplace(Args&&... args) &
+    constexpr T& emplace(Args&&... args) &
         noexcept(std::is_nothrow_constructible_v<T, Args...>) {
         Base::assign_value(std::forward<Args>(args)...);
         return Base::value();
@@ -1174,7 +1176,7 @@ public:
     template <typename F,
               std::enable_if_t<std::is_same_v<std::invoke_result_t<F, E>, T>,
                                int> = 0>
-    T value_or_else(F&& f) const& {
+    constexpr T value_or_else(F&& f) const& {
         return has_value() ? value()
                            : std::forward<F>(f)(error());
     }
@@ -1182,7 +1184,7 @@ public:
     template <typename F,
               std::enable_if_t<std::is_same_v<std::invoke_result_t<F, E>, T>,
                                int> = 0>
-    T value_or_else(F&& f) && {
+    constexpr T value_or_else(F&& f) && {
         return has_value() ? std::move(value())
                            : std::forward<F>(f)(std::move(error()));
     }
@@ -1316,21 +1318,21 @@ public:
     /// If it's an \c Err, \c nullptr is returned.
     ///
     /// \return T* or \c nullptr
-    T* get_pointer() & noexcept {
+    constexpr T* get_pointer() & noexcept {
         return has_value() ? std::addressof(Base::value()) : nullptr;
     }
 
-    const T* get_pointer() const& noexcept {
+    constexpr const T* get_pointer() const& noexcept {
         return has_value() ? std::addressof(Base::value()) : nullptr;
     }
 
-    T* get_pointer() && noexcept = delete;
+    constexpr T* get_pointer() && noexcept = delete;
     /// @}
 
 
     /// \brief Swaps with other results
     /// \note \c Base::value and \c Base::error are noexcept
-    void swap(Result& rhs) noexcept(
+    constexpr void swap(Result& rhs) noexcept(
         detail::all_of_v<std::is_nothrow_swappable, T, E>) {
         using std::swap;
         if (has_value()) {
@@ -1353,25 +1355,25 @@ public:
     }
 
 private:
-    void value_required() const {
+    constexpr void value_required() const {
         if (!has_value()) {
             throw BadResultAccess();
         }
     }
 
-    void value_required(const char* s) const {
+    constexpr void value_required(const char* s) const {
         if (!has_value()) {
             throw BadResultAccess(s);
         }
     }
 
-    void error_required() const {
+    constexpr void error_required() const {
         if (!has_error()) {
             throw BadResultAccess();
         }
     }
 
-    void error_required(const char* s) const {
+    constexpr void error_required(const char* s) const {
         if (!has_error()) {
             throw BadResultAccess(s);
         }
@@ -1382,7 +1384,7 @@ private:
 /// \brief Swaps Results
 /// \see Result\<T, E\>::swap
 template <typename T, typename E>
-void swap(Result<T, E>& lhs, Result<T, E>& rhs) noexcept(
+constexpr void swap(Result<T, E>& lhs, Result<T, E>& rhs) noexcept(
     detail::all_of_v<std::is_nothrow_swappable, T, E>) {
     lhs.swap(rhs);
 }
