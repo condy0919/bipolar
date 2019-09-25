@@ -1,0 +1,37 @@
+load(
+    '//bipolar:copts/configure_copts.bzl',
+    'BIPOLAR_DEFAULT_COPTS',
+    'BIPOLAR_DEFAULT_LINKOPTS',
+    'BIPOLAR_TEST_COPTS',
+)
+
+package(default_visibility = ['//visibility:public'])
+
+licenses(['notice'])
+
+cc_library(
+    name = 'futures',
+    hdrs = [
+        'properties.hpp',
+    ],
+    srcs = [
+    ],
+    copts = BIPOLAR_DEFAULT_COPTS,
+    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
+    deps = [
+        '@boost//:mp11'
+    ],
+)
+
+cc_test(
+    name = 'future_test',
+    srcs = [
+        'tests/properties_test.cpp',
+    ],
+    copts = BIPOLAR_TEST_COPTS,
+    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
+    deps = [
+        ':futures',
+        '@gtest//:gtest_main',
+    ],
+)
