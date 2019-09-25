@@ -6,9 +6,9 @@ bipolar_dependencies()
 
 git_repository(
     name = 'com_github_nelhage_rules_boost',
-    commit = '82ae1790cef07f3fd618592ad227fe2d66fe0b31',
+    commit = 'a1dd05e7e9178f8aad86e39f3a5b377902eae5b2',
     remote = 'https://github.com/nelhage/rules_boost',
-    shallow_since = "1565011303 -0400",
+    shallow_since = '1568659902 -0700',
 )
 
 load('@com_github_nelhage_rules_boost//:boost/boost.bzl', 'boost_deps')
