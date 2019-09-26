@@ -44,7 +44,7 @@ using property_category_t = typename T::property_category;
 /// assert(is_property_v<FooProperty>);
 /// ```
 template <typename Category>
-struct property {
+struct Property {
     using property_category = Category;
 };
 
@@ -107,7 +107,7 @@ using properties_t = typename T::properties;
 /// \brief a \c Property set consists of properties
 /// \note the Properties cannot have the same category
 template <typename... Properties>
-struct property_set {
+struct PropertySet {
     static_assert(std::conjunction_v<is_property<Properties>...>,
                   "property_set only supports Property types");
     static_assert(
