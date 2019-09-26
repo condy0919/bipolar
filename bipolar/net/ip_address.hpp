@@ -429,7 +429,9 @@ public:
 
     /// \brief Converts this address to an IPv4-compatible [IPv6 address]
     ///
+    /// \code
     /// a.b.c.d becomes: ::a.b.c.d
+    /// \endcode
     IPv6Address to_ipv6_compatible() const noexcept {
         return IPv6Address(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, addr_.addr8[0],
                            addr_.addr8[1], addr_.addr8[2], addr_.addr8[3]);
@@ -437,7 +439,9 @@ public:
 
     /// \brief Converts this address to an IPv4-mapped [IPv6 address]
     ///
+    /// \code
     /// a.b.c.d becomes: ::ffff:a.b.c.d
+    /// \endcode
     IPv6Address to_ipv6_mapped() const noexcept {
         return IPv6Address(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff,
                            addr_.addr8[0], addr_.addr8[1], addr_.addr8[2],
