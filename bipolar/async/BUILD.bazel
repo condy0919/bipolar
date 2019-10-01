@@ -10,7 +10,7 @@ package(default_visibility = ['//visibility:public'])
 licenses(['notice'])
 
 cc_library(
-    name = 'futures',
+    name = 'async',
     hdrs = [
         'properties.hpp',
     ],
@@ -24,9 +24,22 @@ cc_library(
 )
 
 cc_test(
-    name = 'future_test',
+    name = 'async_test',
     srcs = [
         'tests/properties_test.cpp',
+    ],
+    copts = BIPOLAR_TEST_COPTS,
+    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
+    deps = [
+        ':async',
+        '@gtest//:gtest_main',
+    ],
+)
+
+cc_test(
+    name = 'error_test',
+    srcs = [
+        'tests/errro_test.cpp',
     ],
     copts = BIPOLAR_TEST_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,

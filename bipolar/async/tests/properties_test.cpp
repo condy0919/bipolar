@@ -1,14 +1,12 @@
-#include "bipolar/futures/properties.hpp"
+#include "bipolar/async/properties.hpp"
 
 #include <gtest/gtest.h>
 
 using namespace bipolar;
 
-struct FooCategory {};
-struct BarCategory {};
+BIPOLAR_ASYNC_CATEGORY_PROPERTY_DEFINE(Foo)
 
-struct FooProperty : Property<FooCategory> {};
-struct BarProperty : Property<BarCategory> {};
+BIPOLAR_ASYNC_CATEGORY_PROPERTY_DEFINE(Bar)
 
 struct DuckProperty {
     using property_category = FooCategory;

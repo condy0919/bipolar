@@ -10,12 +10,16 @@
 /// A \c PropertySet consists of \c Property s of unique \c PropertyCategory
 ///
 
-#ifndef BIPOLAR_FUTURES_PROPERTIES_HPP_
-#define BIPOLAR_FUTURES_PROPERTIES_HPP_
+#ifndef BIPOLAR_ASYNC_PROPERTIES_HPP_
+#define BIPOLAR_ASYNC_PROPERTIES_HPP_
 
 #include <type_traits>
 
 #include <boost/mp11.hpp>
+
+#define BIPOLAR_ASYNC_CATEGORY_PROPERTY_DEFINE(name)                           \
+    struct name##Category {};                                                  \
+    struct name##Property : Property<name##Category> {};
 
 namespace bipolar {
 ////////////////////////////////////////////////////////////////////////////////
@@ -39,7 +43,7 @@ using property_category_t = typename T::property_category;
 ///
 /// ```
 /// struct FooCategory {};
-/// struct FooProperty : property<FooCategory> {};
+/// struct FooProperty : Property<FooCategory> {};
 ///
 /// assert(is_property_v<FooProperty>);
 /// ```
@@ -72,7 +76,7 @@ using property_category_t = typename property_traits<T>::type;
 ///
 /// ```
 /// struct FooCategory {};
-/// struct FooProperty : property<FooCategory> {};
+/// struct FooProperty : Property<FooCategory> {};
 /// struct DuckProperty {
 ///     using property_category = FooCategory;
 /// };
@@ -144,9 +148,9 @@ using properties_t = typename property_set_traits<T>::type;
 ///
 /// ```
 /// struct FooCategory {};
-/// struct FooProperty : property<FooCategory> {};
+/// struct FooProperty : Property<FooCategory> {};
 ///
-/// using PS = property_set<FooProperty>;
+/// using PS = PropertySet<FooProperty>;
 /// assert(is_property_set_v<PS>);
 /// assert(!is_property_set_v<FooProperty>);
 /// ```
@@ -183,7 +187,7 @@ struct contains_derived_property : std::false_type {};
 template <typename PropertySet, typename Property>
 struct contains_derived_property<
     PropertySet, Property,
-    std::void_t<std::is_base_of<
+    std::enable_if_t<std::is_base_of_v<
         Property, boost::mp11::mp_at<
                       properties_t<PropertySet>,
                       boost::mp11::mp_find<
@@ -204,8 +208,8 @@ struct contains_derived_property<
 /// struct FooCategory {};
 /// struct BarCategory {};
 ///
-/// struct FooProperty : property<FooCategory> {};
-/// struct BarProperty : property<BarCategory> {};
+/// struct FooProperty : Property<FooCategory> {};
+/// struct BarProperty : Property<BarCategory> {};
 ///
 /// // regular cases
 /// using PS0 = property_set<FooProperty, BarProperty>;
@@ -261,7 +265,7 @@ struct contains_category<
 /// ```
 /// struct FooCategory {};
 ///
-/// struct FooProperty {};
+/// struct FooProperty : Property<FooCategory> {};
 ///
 /// using PS = property_set<FooProperty>;
 /// assert(!(category_query_v<PS, int>));
