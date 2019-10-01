@@ -12,6 +12,7 @@ licenses(['notice'])
 cc_library(
     name = 'async',
     hdrs = [
+        'pipe.hpp',
         'properties.hpp',
     ],
     srcs = [
@@ -27,6 +28,7 @@ cc_test(
     name = 'async_test',
     srcs = [
         'tests/properties_test.cpp',
+        'tests/pipe_test.cpp',
     ],
     copts = BIPOLAR_TEST_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
