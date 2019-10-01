@@ -1,4 +1,5 @@
 /// \file result.hpp
+/// \see Result
 
 #ifndef BIPOLAR_CORE_RESULT_HPP_
 #define BIPOLAR_CORE_RESULT_HPP_

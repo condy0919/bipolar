@@ -1,4 +1,12 @@
 /// \file byteorder.hpp
+/// \brief Converts values between host and network byteorder
+///
+/// # Examples
+///
+/// ```
+/// const std::uint16_t b = hton(0x1122);
+/// assert(ntoh(b) == 0x1122);
+/// ```
 
 #ifndef BIPOLAR_CORE_BYTEORDER_HPP_
 #define BIPOLAR_CORE_BYTEORDER_HPP_
