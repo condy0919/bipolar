@@ -638,7 +638,7 @@ public:
 ///
 /// A simple function returning \c Result might be defined and used like so:
 ///
-/// ```cpp
+/// ```
 /// Result<int, const char*> parse(const char* s) {
 ///     if (std::strlen(s) < 3) {
 ///         return Err("string length is less than 3");
@@ -669,7 +669,7 @@ public:
     /// @{
     /// \brief Constructs from \c Ok variant
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(42));
     /// assert(x.has_value());
     /// ```
@@ -690,7 +690,7 @@ public:
     /// @{
     /// \brief Constructs from \c Err variant
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Err(42));
     /// assert(x.has_error());
     /// ```
@@ -821,7 +821,7 @@ public:
     /// \tparam F :: T -> U
     /// \return Result\<U, E\>
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// const auto res = x.map([](int x) { return x + 1; });
     /// assert(res.has_value() && res.value() == 3);
@@ -848,7 +848,7 @@ public:
     /// \tparam M :: E -> U
     /// \return U
     ///
-    /// ```cpp
+    /// ```
     /// const int k = 21;
     ///
     /// const Result<int, int> x(Ok(2));
@@ -886,7 +886,7 @@ public:
     /// \tparam F :: E -> U
     /// \return Result\<T, U\>
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// const auto res = x.map_err([](int x) { return x + 1; });
     /// assert(!res.has_error());
@@ -916,7 +916,7 @@ public:
     /// \tparam F :: T -> U
     /// \return U \c Result type
     ///
-    /// ```cpp
+    /// ```
     /// Result<int, int> sq(int x) {
     ///     return Ok(x * x);
     /// }
@@ -958,7 +958,7 @@ public:
     /// \tparam F :: E -> U
     /// \return U \c Result type
     ///
-    /// ```cpp
+    /// ```
     /// Result<int, int> sq(int x) {
     ///     return Ok(x * x);
     /// }
@@ -1000,7 +1000,7 @@ public:
     /// \brief Returns \c true if the result is an \c Ok value containing the
     /// given value.
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// assert(x.contains(2));
     /// assert(!x.contains(3));
@@ -1018,7 +1018,7 @@ public:
     /// \brief Returns \c true if the result is an \c Err value containing the
     /// given value.
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// assert(!x.contains_err(2));
     ///
@@ -1041,7 +1041,7 @@ public:
     ///
     /// \return Option\<T\>
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// const auto optx = x.ok();
     /// assert(optx.has_value() && optx.value() == 2);
@@ -1066,7 +1066,7 @@ public:
     ///
     /// \return Option\<E\>
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// const auto optx = x.err();
     /// assert(!optx.has_value());
@@ -1088,7 +1088,7 @@ public:
     /// \brief Inplacement constructs from args
     /// \return T&
     ///
-    /// ```cpp
+    /// ```
     /// Result<std::string, int> x(Err(2));
     /// assert(x.has_error() && x.error() == 2);
     /// 
@@ -1104,7 +1104,7 @@ public:
 
     /// \brief Returns \c true if the result is \c Ok variant
     ///
-    /// ```cpp
+    /// ```
     /// Result<int, int> res = Ok(3);
     /// assert(res.has_value());
     ///
@@ -1117,7 +1117,7 @@ public:
 
     /// \brief Returns \c true if the result is \c Err variant
     ///
-    /// ```cpp
+    /// ```
     /// Result<int, int> err_res = Err(3);
     /// assert(err_res.has_error());
     /// ```
@@ -1137,7 +1137,7 @@ public:
     /// \return T
     /// \see value_or_else
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// assert(x.value_or(3) == 2);
     ///
@@ -1165,7 +1165,7 @@ public:
     /// \tparam F :: E -> T
     /// \return T
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// const int resx = x.value_or_else([](int x) { return x; });
     /// assert(resx == 2);

@@ -85,7 +85,7 @@ Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
 ///
 /// Basic usage
 ///
-/// ```cpp
+/// ```
 /// Option<double> divide(int numerator, int denominator) {
 ///     if (denominator == 0) {
 ///         return None;
@@ -100,7 +100,7 @@ Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
 ///
 /// Indicate an error instead of using out parameter and bool return value
 ///
-/// ```cpp
+/// ```
 /// Option<std::size_t> find(const std::vector<int>& vec, int target) {
 ///     for (std::size_t i = 0; i < vec.size(); ++i) {
 ///         if (vec[i] == target) {
@@ -124,7 +124,7 @@ public:
     /// @{
     /// \brief No value
     ///
-    /// ```cpp
+    /// ```
     /// const Option<int> none(None);
     /// assert(!none.has_value());
     /// ```
@@ -136,7 +136,7 @@ public:
     /// @{
     /// \brief Constructs from value directly
     ///
-    /// ```cpp
+    /// ```
     /// const Option<int> opt(42);
     /// assert(opt.has_value());
     /// ```
@@ -171,7 +171,7 @@ public:
 
     /// \brief Assigns with None will reset the option
     ///
-    /// ```cpp
+    /// ```
     /// Option<int> res(Some(42));
     /// assert(res.has_value());
     ///
@@ -209,7 +209,7 @@ public:
     /// @{
     /// \brief Assigns with value directly
     ///
-    /// ```cpp
+    /// ```
     /// Option<int> opt(None);
     /// assert(!opt.has_value());
     ///
@@ -265,7 +265,7 @@ public:
     /// \brief Inplacement constructs from args
     /// \return T&
     ///
-    /// ```cpp
+    /// ```
     /// Option<std::string> sopt(None);
     ///
     /// sopt.emplace("hello");
@@ -282,7 +282,7 @@ public:
 
     /// \brief Resets to None
     ///
-    /// ```cpp
+    /// ```
     /// Option<int> x(Some(1));
     /// assert(x.has_value());
     ///
@@ -295,7 +295,7 @@ public:
 
     /// \brief Swaps with other option
     ///
-    /// ```cpp
+    /// ```
     /// Option<int> x(Some(1));
     /// assert(x.has_value() && x.value() == 1);
     ///
@@ -382,7 +382,7 @@ public:
     /// \brief Returns the contained value or the result of function
     /// \return T
     ///
-    /// ```cpp
+    /// ```
     /// const int k = 10;
     /// const Option<int> none(None);
     /// const Option<int> opt(Some(1));
@@ -412,7 +412,7 @@ public:
     /// \tparam F :: T -> U
     /// \return Option\<U\>
     ///
-    /// ```cpp
+    /// ```
     /// const auto opt = Some(1);
     /// const auto res = opt.map([](int x) -> std::string {
     ///     char buf[32];
@@ -442,7 +442,7 @@ public:
     /// \tparam F :: T -> U
     /// \return U
     ///
-    /// ```cpp
+    /// ```
     /// const auto opt = Some(0);
     /// const auto res = opt.map_or(Some(-1),
     ///                             [](int x) -> int { return x + 1; });
@@ -474,7 +474,7 @@ public:
     /// \tparam D :: () -> U
     /// \return U
     ///
-    /// ```cpp
+    /// ```
     /// const auto opt = Some(0);
     /// const auto res = opt.map_or_else([]() -> Option<int> { return Some(-1); },
     ///                                  [](int x) -> int { return x + 1; });
@@ -509,7 +509,7 @@ public:
     /// \tparam F :: const T& -> Option\<U\>
     /// \return Option\<U\>
     ///
-    /// ```cpp
+    /// ```
     /// Option<int> square(int x) { return Some(x * x); }
     /// Option<int> add1(int x) { return Some(x + 1); }
     ///
@@ -553,7 +553,7 @@ public:
     /// \tparam F :: const T& -> bool
     /// \return Option\<T\>
     ///
-    /// ```cpp
+    /// ```
     /// const auto x = Some(13);
     /// const auto res = x.filter([](int x) { return x % 2 == 0; });
     /// assert(!res.has_value());
@@ -584,7 +584,7 @@ public:
     /// \tparam F :: () -> Option\<T\>
     /// \return Option\<T\>
     ///
-    /// ```cpp
+    /// ```
     /// const auto opt = Some(0);
     /// const Result<int> none(None);
     ///
@@ -611,7 +611,7 @@ public:
 
     /// \brief Takes the value out of the option, leaving a \c None in place
     ///
-    /// ```cpp
+    /// ```
     /// Option<std::string> opt("hello");
     ///
     /// auto out = opt.take();
