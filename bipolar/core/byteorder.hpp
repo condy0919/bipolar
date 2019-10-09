@@ -1,12 +1,13 @@
-/// \file byteorder.hpp
-/// \brief Converts values between host and network byteorder
-///
-/// # Examples
-///
-/// ```
-/// const std::uint16_t b = hton(0x1122);
-/// assert(ntoh(b) == 0x1122);
-/// ```
+//! Byteorder helpful methods
+//!
+//! It converts values between host and network byteorder
+//!
+//! # Examples
+//!
+//! ```
+//! const std::uint16_t b = hton(0x1122);
+//! assert(ntoh(b) == 0x1122);
+//! ```
 
 #ifndef BIPOLAR_CORE_BYTEORDER_HPP_
 #define BIPOLAR_CORE_BYTEORDER_HPP_
@@ -19,7 +20,7 @@ inline constexpr bool is_big_endian = (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__);
 }
 
 /// @{
-/// \brief Converts from host byteorder to network byteorder
+/// Converts from host byteorder to network byteorder
 constexpr inline std::uint8_t hton(std::uint8_t v) noexcept {
     return v;
 }
@@ -50,7 +51,7 @@ constexpr inline std::uint64_t hton(std::uint64_t v) noexcept {
 /// @}
 
 /// @{
-/// \brief Converts from network byteorder to host byteorder
+/// Converts from network byteorder to host byteorder
 constexpr inline std::uint8_t ntoh(std::uint8_t v) noexcept {
     return v;
 }
