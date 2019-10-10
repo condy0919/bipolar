@@ -1,14 +1,11 @@
-/// \file properties.hpp
-/// \brief Traits about properties
-///
-/// There are three concepts:
-///
-/// - \c Property
-/// - \c PropertyCategory
-/// - \c PropertySet
-///
-/// A \c PropertySet consists of \c Property s of unique \c PropertyCategory
-///
+//! Properties related traits
+//!
+//! There are three concepts:
+//! - Property
+//! - PropertyCategory
+//! - PropertySet
+//!
+//! A `PropertySet` consists of `Property` s of unique `PropertyCategory`
 
 #ifndef BIPOLAR_ASYNC_PROPERTIES_HPP_
 #define BIPOLAR_ASYNC_PROPERTIES_HPP_
@@ -27,19 +24,20 @@ namespace bipolar {
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace detail {
-/// \internal
-/// \brief Gets \c property_category type from \c T
-///
-/// \endinternal
+// Gets `property_category` type from `T`
 template <typename T>
 using property_category_t = typename T::property_category;
 } // namespace detail
 
-/// \struct property
-/// \brief The property interface
-/// \note All properties should be derived from \c property
+/// Property
 ///
-/// \tparam Category the \c Category type
+/// # Brief
+///
+/// The property interface
+///
+/// All properties should be derived from \c property
+/// 
+/// # Examples
 ///
 /// ```
 /// struct FooCategory {};
@@ -53,8 +51,9 @@ struct Property {
 };
 
 /// @{
-/// \struct property_traits
-/// \brief Extracts the \c PropertyCategory type from \c Property
+/// property_traits
+///
+/// Extracts the `PropertyCategory` type from a `Property`
 template <typename, typename = void>
 struct property_traits;
 
@@ -69,10 +68,16 @@ using property_category_t = typename property_traits<T>::type;
 /// @}
 
 /// @{
-/// \struct is_property
-/// \brief Checks whether T is property type
-/// \note The check relaxes the property restriction. If \c T looks like a
-/// \c property (having property_category type alias inside), it's a \c property
+/// is_property
+///
+/// # Brief
+///
+/// Checks whether `T` is property type.
+///
+/// The check relaxes the property restriction. If `T` looks like a
+/// `Property` (having `property_category` type alias inside), it's a `Property`
+///
+/// # Examples
 ///
 /// ```
 /// struct FooCategory {};
@@ -99,34 +104,32 @@ inline constexpr bool is_property_v = is_property<T>::value;
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace detail {
-/// \internal
-/// \brief Gets \c properties type from \c T
-///
-/// \endinternal
+// Gets `properties` type from `T`
 template <typename T>
 using properties_t = typename T::properties;
 } // namespace detail
 
-/// \struct property_set
-/// \brief a \c Property set consists of properties
-/// \note the Properties cannot have the same category
+/// PropertySet
+///
+/// A `PropertySet` consists of properties which cannot have the same category
 template <typename... Properties>
 struct PropertySet {
     static_assert(std::conjunction_v<is_property<Properties>...>,
-                  "property_set only supports Property types");
+                  "PropertySet only supports Property types");
     static_assert(
         std::is_same_v<
             boost::mp11::mp_unique<
                 boost::mp11::mp_list<property_category_t<Properties>...>>,
             boost::mp11::mp_list<property_category_t<Properties>...>>,
-        "property_set has multiple properties from the same category");
+        "PropertySet has multiple properties from the same category");
 
     using properties = boost::mp11::mp_list<Properties...>;
 };
 
 /// @{
-/// \struct property_set_traits
-/// \brief Extracts the properties type from T
+/// property_set_traits
+///
+/// Extracts the `properties` type from T
 template <typename T, typename = void>
 struct property_set_traits;
 
@@ -141,10 +144,16 @@ using properties_t = typename property_set_traits<T>::type;
 /// @}
 
 /// @{
-/// \struct is_property_set
-/// \brief Checks where T is a property_set type
-/// \note The check relaxes the property_set restriction. If \c T looks like a
-/// \c property_set (having properties type alias inside), it's a property_set
+/// is_property_set
+///
+/// # Brief
+///
+/// Checks where `T` is a `PropertySet` type.
+///
+/// The check relaxes the property_set restriction. If `T` looks like a
+/// `PropertySet` (having properties type alias inside), it's a `PropertySet`
+///
+/// # Examples
 ///
 /// ```
 /// struct FooCategory {};
@@ -165,25 +174,17 @@ inline constexpr bool is_property_set_v = is_property_set<T>::value;
 /// @}
 
 namespace detail {
-/// \internal
-/// \brief The fallback version of contains_derived_property
-/// \endinternal
 template <typename PropertySet, typename Property, typename = void>
 struct contains_derived_property : std::false_type {};
 
-/// \internal
-/// \struct contains_derived_property
-/// \brief Searches for the \c Property in \c PropertySet
-/// With the following conditions satisfied:
-/// - Only one \c Property of queried \e PropertySet has the same \c Category
-/// with the expected \e Property's
-/// - The expected \e Property is derived from the corresponding \c Property
-/// which meets the above condition
-///
-/// \tparam PropertySet the queried \e PropertySet
-/// \tparam Property the expected \e Property
-///
-/// \endinternal
+// contains_derived_property
+//
+// Searches for the `Property` in `PropertySet`
+// with the following conditions satisfied:
+// - Only one `Property` of queried `PropertySet` has the same `Category`
+// with the expected `Property`s
+// - The expected `Property` is derived from the corresponding `Property`
+// which meets the above condition
 template <typename PropertySet, typename Property>
 struct contains_derived_property<
     PropertySet, Property,
@@ -198,11 +199,15 @@ struct contains_derived_property<
 } // namespace detail
 
 /// @{
-/// \struct property_query
-/// \brief Checks whether all properties have the same category with the
-/// corresponding one in property_set
+/// property_query
 ///
-/// \see contains_derived_property
+/// # Brief
+///
+/// Checks whether all properties exist in `PropertySet`.
+///
+/// see `contains_derived_property` for details
+///
+/// # Examples
 ///
 /// ```
 /// struct FooCategory {};
@@ -216,7 +221,7 @@ struct contains_derived_property<
 /// assert((property_query_v<PS0, FooProperty>));
 /// assert((property_query_v<PS0, BarProperty>));
 ///
-/// // the expected \e FooProperty is the base case of \e BazProperty
+/// // the expected FooProperty is the base case of BazProperty
 /// struct BazProperty : FooProperty {};
 /// using PS1 = property_set<BazProperty, BarProperty>;
 /// assert((property_query_v<PS1, FooProperty>));
@@ -234,18 +239,12 @@ inline constexpr bool property_query_v =
 /// @}
 
 namespace detail {
-/// \internal
-/// \brief The fallback version of contains_category
-///
-/// \endinternal
 template <typename PropertySet, typename Category, typename = void>
 struct contains_category : std::false_type {};
 
-/// \struct contains_category
-/// \brief Checks whether the expected \e Category is in \e PropertySet
+/// contains_category
 ///
-/// \tparam PropertySet the queried \e PropertySet
-/// \tparam Category the expected \e Category
+/// Checks whether the expected `Category` is in `PropertySet`
 template <typename PropertySet, typename Category>
 struct contains_category<
     PropertySet, Category,
@@ -258,9 +257,15 @@ struct contains_category<
 } // namespace detail
 
 /// @{
-/// \brief Checks whether all expected \e Category s existed in \e PropertySet
+/// category_query
 ///
-/// \see contains_category
+/// # Brief
+///
+/// Checks whether all expected `Category` s existed in `PropertySet`
+///
+/// see `contains_category` for details
+///
+/// # Examples
 ///
 /// ```
 /// struct FooCategory {};
