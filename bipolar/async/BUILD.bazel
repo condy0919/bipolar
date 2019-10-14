@@ -14,12 +14,17 @@ cc_library(
     hdrs = [
         'pipe.hpp',
         'properties.hpp',
+        'receiver/traits.hpp',
+        'receiver/receiver.hpp',
+        'receiver/primitive.hpp',
+        'receiver/callback.hpp',
     ],
     srcs = [
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
     deps = [
+        '//bipolar/core:core',
         '@boost//:mp11'
     ],
 )
@@ -34,19 +39,6 @@ cc_test(
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
     deps = [
         ':async',
-        '@gtest//:gtest_main',
-    ],
-)
-
-cc_test(
-    name = 'error_test',
-    srcs = [
-        'tests/errro_test.cpp',
-    ],
-    copts = BIPOLAR_TEST_COPTS,
-    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
-    deps = [
-        ':futures',
         '@gtest//:gtest_main',
     ],
 )
