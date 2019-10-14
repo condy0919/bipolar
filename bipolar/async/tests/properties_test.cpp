@@ -24,6 +24,12 @@ TEST(Properties, property_set) {
     EXPECT_FALSE(is_property_set_v<DuckProperty>);
 }
 
+TEST(Properties, property_set_from) {
+    struct foo : PropertySet<BIPOLAR_ASYNC_PROPERTY(Foo)> {};
+    EXPECT_TRUE((std::is_same_v<PropertySet<BIPOLAR_ASYNC_PROPERTY(Foo)>,
+                                property_set_from_t<foo>>));
+}
+
 TEST(Properties, property_query) {
     using PS0 = PropertySet<FooProperty>;
     EXPECT_TRUE((property_query_v<PS0, FooProperty>));

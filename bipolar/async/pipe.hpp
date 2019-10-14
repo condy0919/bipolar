@@ -2,8 +2,8 @@
 //!
 //! # Brief
 //!
-//! Pipe introduces composability which allows Senders, Receivers,
-//! and Executors to compose.
+//! Pipe introduces composability which allows `Senders`, `Receivers`,
+//! and `Executors` to compose.
 //!
 //! Composability involves creating functions in the pattern
 //! `Executor(Executor)` and `Continuation(Continuation)` that adapt one

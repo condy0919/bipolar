@@ -14,9 +14,18 @@
 
 #include <boost/mp11.hpp>
 
+#define BIPOLAR_ASYNC_CATEGORY(name) name##Category
+#define BIPOLAR_ASYNC_CATEGORY_DEFINE(name)                                    \
+    struct BIPOLAR_ASYNC_CATEGORY(name) {};
+
+#define BIPOLAR_ASYNC_PROPERTY(name) name##Property
+#define BIPOLAR_ASYNC_PROPERTY_DEFINE(name, cat)                               \
+    struct BIPOLAR_ASYNC_PROPERTY(name)                                        \
+        : Property<BIPOLAR_ASYNC_CATEGORY(cat)> {};
+
 #define BIPOLAR_ASYNC_CATEGORY_PROPERTY_DEFINE(name)                           \
-    struct name##Category {};                                                  \
-    struct name##Property : Property<name##Category> {};
+    BIPOLAR_ASYNC_CATEGORY_DEFINE(name)                                        \
+    BIPOLAR_ASYNC_PROPERTY_DEFINE(name, name)
 
 namespace bipolar {
 ////////////////////////////////////////////////////////////////////////////////
@@ -171,6 +180,44 @@ struct is_property_set<T, std::void_t<properties_t<T>>> : std::true_type {};
 
 template <typename T>
 inline constexpr bool is_property_set_v = is_property_set<T>::value;
+/// @}
+
+/// @{
+/// property_set_from
+///
+/// # Brief
+///
+/// Re-construct `PropertySet` type from a derived type of it
+///
+/// # Examples
+///
+/// ```
+/// BIPOLAR_ASYNC_CATEGORY_PROPERTY_DEFINE(Foo)
+///
+/// struct foo : PropertySet<BIPOLAR_ASYNC_PROPERTY(Foo)> {};
+///
+/// static_assert(std::is_same_v<PropertySet<BIPOLAR_ASYNC_PROPERTY(Foo)>,
+///                              property_set_from_t<foo>>);
+/// ```
+template <typename T>
+struct property_set_from {
+private:
+    static_assert(is_property_set_v<T>, "T must be a PropertySet type");
+
+    template <typename>
+    struct impl;
+
+    template <typename... Properties>
+    struct impl<boost::mp11::mp_list<Properties...>> {
+        using type = PropertySet<Properties...>;
+    };
+
+public:
+    using type = typename impl<properties_t<T>>::type;
+};
+
+template <typename T>
+using property_set_from_t = typename property_set_from<T>::type;
 /// @}
 
 namespace detail {
