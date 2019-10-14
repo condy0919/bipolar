@@ -1,4 +1,6 @@
-/// \file socket_address.hpp
+//! SocketAddress
+//!
+//! see `SocketAddress` for details
 
 #ifndef BIPOLAR_IO_SOCKET_ADDRESS_HPP_
 #define BIPOLAR_IO_SOCKET_ADDRESS_HPP_
@@ -11,21 +13,25 @@
 #include "bipolar/net/ip_address.hpp"
 
 namespace bipolar {
-/// \enum SocketAddressFormatError
-/// \brief Socket address format error
+/// SocketAddressFormatError
+///
+/// Socket address format error
 enum class SocketAddressFormatError {
     INVALID_ADDRESS,
     INVALID_PORT,
     INVALID_FORMAT,
 };
 
-/// \class SocketAddress
-/// \brief An internet socket address, either IPv4 or IPv6.
+/// SocketAddress
+///
+/// # Brief
+///
+/// An internet socket address, either IPv4 or IPv6.
 ///
 /// Internet socket addresses consist of an IP address, a 16-bit port number,
 /// as well as possibly some version-dependent additional information.
 ///
-/// The size of \c SocketAddress instance may vary depending on the target
+/// The size of `SocketAddress` instance may vary depending on the target
 /// operating system.
 ///
 /// # Examples
@@ -39,7 +45,7 @@ enum class SocketAddressFormatError {
 /// ```
 class SocketAddress {
 public:
-    /// \brief Creates a new \c SocketAddress from an \c IPAddress and a port
+    /// Creates a new `SocketAddress` from an `IPAddress` and a port
     /// number
     ///
     /// # Examples
@@ -54,7 +60,7 @@ public:
     constexpr SocketAddress(IPAddress addr, std::uint16_t port) noexcept
         : addr_(addr), port_(port) {}
 
-    /// \brief Returns the \c IPAddress associated with this socket address
+    /// Returns the `IPAddress` associated with this socket address
     ///
     /// # Examples
     ///
@@ -68,7 +74,7 @@ public:
         return addr_;
     }
 
-    /// \brief Changes the \c IPAddress associated with this socket address
+    /// Changes the `IPAddress` associated with this socket address
     ///
     /// # Examples
     ///
@@ -82,8 +88,11 @@ public:
         addr_ = addr;
     }
 
-    /// \brief Returns the port number associated with this socket address
-    /// \note port is in network byteorder
+    /// Returns the port number associated with this socket address
+    ///
+    /// # Note
+    ///
+    /// port is in network byteorder
     ///
     /// # Examples
     ///
@@ -96,8 +105,11 @@ public:
         return port_;
     }
 
-    /// \brief Changes the port number associated with this socket address
-    /// \note port shoule be in network byteorder
+    /// Changes the port number associated with this socket address
+    ///
+    /// # Note
+    ///
+    /// port shoule be in network byteorder
     ///
     /// # Examples
     ///
@@ -111,7 +123,7 @@ public:
         port_ = port;
     }
 
-    /// \brief Creates a new \c SocketAddress from a \c string_view
+    /// Creates a new `SocketAddress` from a `string_view`
     /// The following two formats are valid:
     /// - `ip:port` for IPv4
     /// - `[ip]:port` for IPv6
@@ -139,7 +151,7 @@ public:
     static Result<SocketAddress, SocketAddressFormatError>
     from_str(std::string_view sv) noexcept;
 
-    /// \brief Stringify the address and the port number
+    /// Stringify the address and the port number
     /// - `ip:port` for IPv4
     /// - `[ip]:port` for IPv6
     ///
@@ -156,7 +168,7 @@ public:
     /// ```
     std::string str() const;
 
-    /// \brief Converts to sockaddr to communicate with system calls
+    /// Converts to sockaddr to communicate with system calls
     constexpr struct sockaddr_storage to_sockaddr() const {
         return addr_.to_sockaddr(port_);
     }
@@ -167,7 +179,7 @@ private:
 };
 
 /// @{
-/// \brief Compares \c SocketAddress with other \c SocketAddress
+/// Compares `SocketAddress` with other `SocketAddress`
 inline bool operator==(const SocketAddress& lhs, const SocketAddress& rhs) {
     return (lhs.addr() == rhs.addr()) && (lhs.port() == rhs.port());
 }

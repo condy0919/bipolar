@@ -1,4 +1,6 @@
-/// \file result.hpp
+//! Result
+//!
+//! See `Result` class template
 
 #ifndef BIPOLAR_CORE_RESULT_HPP_
 #define BIPOLAR_CORE_RESULT_HPP_
@@ -14,9 +16,11 @@
 #include "bipolar/core/option.hpp"
 
 
-/// \brief Macro sugar for unwraping a \c Result. Early return when \c Err state
+/// Macro sugar for unwraping a `Result`. Early return when `Err` state
 ///
-/// \param expr of Result\<T, E\> return type
+/// # Constraints
+///
+/// expr :: Result<T, E>
 #define BIPOLAR_TRY(expr)                                                      \
     ({                                                                         \
         static_assert(::bipolar::detail::is_result_v<decltype((expr))>);       \
@@ -31,8 +35,7 @@ namespace bipolar {
 template <typename T, typename E>
 class Result;
 
-/// \brief Ok variant of Result
-/// \see Result
+/// Ok variant of `Result`
 template <typename T>
 struct Ok {
     constexpr Ok(T&& val) : value(std::move(val)) {}
@@ -47,8 +50,7 @@ struct Ok {
     T value;
 };
 
-/// \brief Err variant of Result
-/// \see Result
+/// Err variant of `Result`
 template <typename E>
 struct Err {
     constexpr Err(E&& val) : value(std::move(val)) {}
@@ -66,10 +68,7 @@ struct Err {
 
 namespace detail {
 /// @{
-/// \internal
-/// \class is_result
-/// \brief Checks whether \c T is Result or not
-/// \endinternal
+/// Checks whether `T` is `Result` or not
 template <typename T>
 struct is_result_impl : std::false_type {};
 
@@ -85,10 +84,7 @@ inline constexpr bool is_result_v = is_result<T>::value;
 
 
 /// @{
-/// \internal
-/// \name all_of
-/// \brief Checks whether all \c T meet the \c Trait or not
-/// \endinternal
+/// Checks whether all `T` meet the `Trait` or not
 template <template <typename> typename Trait, typename... Ts>
 using all_of = std::conjunction<Trait<Ts>...>;
 
@@ -97,9 +93,7 @@ inline constexpr bool all_of_v = all_of<Trait, Ts...>::value;
 /// @}
 
 
-/// \internal
-/// \brief The data type that storage holds
-/// \endinternal
+/// The data type that storage holds
 enum class Which : unsigned char {
     Empty, ///< Only used in construction
     Value, ///< Ok
@@ -111,13 +105,12 @@ struct ValueTag {};
 struct ErrorTag {};
 
 /// @{
-/// \internal
-/// \struct StorageTrait
-/// \brief With \c CRTP idiom, \c Derived class is still incomplete.
+/// StorageTrait
+///
+/// With [`CRTP`] idiom, `Derived` class is still incomplete.
 /// Using traits as workaround.
 ///
-/// \see https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
-/// \endinternal
+/// [`CRTP`]: https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
 template <typename>
 struct StorageTrait;
 
@@ -150,24 +143,17 @@ struct StorageTrait<NonTrivialStorage<T, E>> {
 /// @}
 
 
-/// \internal
-/// \brief The storage interface type using \c CRTP
-/// \related StorageTrait
-/// \endinternal
+/// The storage interface type using `CRTP`
+/// see `SmallTrivialStorage`, `TrivialStorage`, `NonTrivialStorage` for details
 template <typename Derived>
 class Storage {
     using T = typename StorageTrait<Derived>::value_type;
     using E = typename StorageTrait<Derived>::error_type;
 
 public:
-    /// \internal
-    /// \brief Assigns a value
-    /// - For \c trivial types, uses assignment operator
-    /// - For \c nontrivial types, it will be overridden
-    /// \related SmallTrivialStorage
-    /// \related TrivialStorage
-    /// \related NonTrivialStorage
-    /// \endinternal
+    /// Assigns a value
+    /// - For trivial types, uses assignment operator
+    /// - For nontrivial types, it will be overridden
     template <typename... Ts>
     constexpr void assign_value(Ts&&... ts) {
         that()->clear();
@@ -180,14 +166,9 @@ public:
         }
     }
 
-    /// \internal
-    /// \brief Assigns an error
-    /// - For \c trivial types, uses assignment operator
-    /// - For \c nontrivial types, it will be overridden
-    /// \related SmallTrivialStorage
-    /// \related TrivialStorage
-    /// \related NonTrivialStorage
-    /// \endinternal
+    /// Assigns an error
+    /// - For trivial types, uses assignment operator
+    /// - For nontrivial types, it will be overridden
     template <typename... Es>
     constexpr void assign_error(Es&&... es) {
         that()->clear();
@@ -200,9 +181,7 @@ public:
         }
     }
 
-    /// \internal
-    /// \brief Assigns with the others
-    /// \endinternal
+    /// Assigns with the others
     template <typename U>
     constexpr void assign(U&& rhs) {
         switch (rhs.which()) {
@@ -219,17 +198,13 @@ public:
         }
     }
 
-    /// \internal
-    /// \brief Resets to empty
-    /// - For \c trivial types, it does nothing
-    /// - For \c nontrivial types, it will be overridden
-    /// \endinternal
+    /// Resets to empty
+    /// - For trivial types, it does nothing
+    /// - For nontrivial types, it will be overridden
     constexpr void clear() {}
 
     /// @{
-    /// \internal
-    /// \brief Returns the \c value
-    /// \endinternal
+    /// Returns the value
     constexpr T& value() & {
         return that()->value_;
     }
@@ -249,9 +224,7 @@ public:
 
 
     /// @{
-    /// \internal
-    /// \brief Returns the \c error
-    /// \endinternal
+    /// Returns the error
     constexpr E& error() & {
         return that()->error_;
     }
@@ -270,14 +243,12 @@ public:
     /// @}
 
     /// @{
-    /// \internal
-    /// \brief Returns the holding data type
-    /// \endinternal
+    /// Returns the holding data type
     constexpr Which which() const {
         return that()->which_;
     }
 
-    /// \brief Sets holding data type
+    // Sets holding data type
     constexpr void which(Which w) {
         that()->which_ = w;
     }
@@ -293,9 +264,12 @@ private:
     }
 };
 
-/// \internal
-/// \struct SmallTrivialStorage
-/// \brief Small trivial storage type
+/// SmallTrivialStorage
+///
+/// # Brief
+///
+/// Small trivial storage type
+///
 /// For small (pointer-sized) trivial types, a struct is faster than a union
 /// Benchmark on `Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz`
 ///
@@ -303,7 +277,6 @@ private:
 /// |---------+-------------|
 /// | struct  | 7.42        |
 /// | union   | 7.81        |
-/// \endinternal
 template <typename T, typename E>
 struct SmallTrivialStorage : Storage<SmallTrivialStorage<T, E>> {
     static_assert(std::is_trivial_v<T>, "T must be trivial");
@@ -333,11 +306,13 @@ struct SmallTrivialStorage : Storage<SmallTrivialStorage<T, E>> {
         : which_(Which::Error), value_{}, error_(std::forward<Es>(es)...) {}
 };
 
-/// \internal
-/// \struct TrivialStorage
-/// \brief Trivial storage type
+/// TrivialStorage
+///
+/// # Brief
+///
+/// Trivial storage type
+///
 /// No need to destructs value/error because it's trivial.
-/// \endinternal
 template <typename T, typename E>
 struct TrivialStorage : Storage<TrivialStorage<T, E>> {
     static_assert(std::is_trivially_copyable_v<T>,
@@ -462,10 +437,13 @@ BIPOLAR_TRAIT_DISABLE_GEN(
 #undef BIPOLAR_TRAIT_DISABLE_GEN
 
 
-/// \internal
-/// \brief The inner storage type used with non-trivial types.
-/// \see NonTrivialStorage
-/// \endinternal
+/// NonTrivialStorageInner
+///
+/// # Brief
+///
+/// The inner storage type used with non-trivial types.
+///
+/// see `NonTrivialStorage` for details
 template <typename T, typename E>
 struct NonTrivialStorageInner {
     Which which_ = Which::Empty;
@@ -504,14 +482,15 @@ struct NonTrivialStorageInner {
     ~NonTrivialStorageInner() {}
 };
 
-/// \internal
-/// \struct NonTrivialStorage
-/// \brief nontrivial storage type
-/// - \e copy-ctor requires \c T and \c E all copy constructible
-/// - \e move-ctor requires \c T and \c E all move constructible
-/// - \e copy-assign requires \e copy-ctor and \c T and \c E all copy assignable
-/// - \e move-assign requires \e move-ctor and \c T and \c E all move assignable
-/// \endinternal
+/// NonTrivialStorage
+///
+/// # Brief
+///
+/// nontrivial storage type
+/// - copy-ctor requires `T` and `E` all copy constructible
+/// - move-ctor requires `T` and `E` all move constructible
+/// - copy-assign requires copy-ctor and `T` and `E` all copy assignable
+/// - move-assign requires move-ctor and `T` and `E` all move assignable
 template <typename T, typename E>
 struct NonTrivialStorage
     : Storage<NonTrivialStorage<T, E>>,
@@ -538,19 +517,15 @@ struct NonTrivialStorage
     using NonTrivialStorageInner<T, E>::NonTrivialStorageInner;
 
     /// @{
-    /// \internal
-    /// \brief Makes it look like a trivial type like \c SmallTrivialStorage
-    /// and \c TrivialStorage
-    /// \endinternal
+    /// Makes it look like a trivial type like `SmallTrivialStorage`
+    /// and `TrivialStorage`
     constexpr NonTrivialStorage(const NonTrivialStorage&) = default;
     constexpr NonTrivialStorage(NonTrivialStorage&&) = default;
     /// @}
 
     /// @{
-    /// \internal
-    /// \brief Makes it look like a trivial type like \c SmallTrivialStorage
-    /// and \c TrivialStorage
-    /// \endinternal
+    /// Makes it look like a trivial type like `SmallTrivialStorage`
+    /// and `TrivialStorage`
     constexpr NonTrivialStorage& operator=(const NonTrivialStorage&) = default;
     constexpr NonTrivialStorage& operator=(NonTrivialStorage&&) = default;
     /// @}
@@ -559,10 +534,8 @@ struct NonTrivialStorage
         clear();
     }
 
-    /// \internal
-    /// \brief Destructs current value/error
-    /// Overrides (actually shadows) the \c Base empty clear
-    /// \endinternal
+    /// Destructs current value/error
+    /// Overrides (actually shadows) the `Base` empty clear
     constexpr void clear() /* override */ {
         switch (this->which_) {
         case Which::Value:
@@ -603,9 +576,7 @@ struct NonTrivialStorage
     }
 };
 
-/// \internal
-/// The storage type which \c Result will use
-/// \endinternal
+// The storage type which Result will use
 template <typename T, typename E>
 using ResultStorage = std::conditional_t<
     all_of_v<std::is_trivial, T, E> && sizeof(std::pair<T, E>) <= sizeof(void* [2]),
@@ -615,8 +586,11 @@ using ResultStorage = std::conditional_t<
 } // namespace detail
 
 
-/// \class BadResultAccess
-/// \brief Throws on logic errors
+/// BadResultAccess
+///
+/// # Brief
+///
+/// Throws on logic errors
 class BadResultAccess : public std::logic_error {
 public:
     BadResultAccess() : std::logic_error("Bad result access") {}
@@ -625,19 +599,20 @@ public:
 };
 
 
-/// \class Result
-/// \brief Result is a type that represents either success Ok or failure
-/// \tparam T The success type
-/// \tparam E The error type
+/// Result
 ///
-/// \c Result is the type used for returning and propagating errors. It's a
-/// \c std::pair like class with the variants, \c Ok, representing success and
-/// containing a value, and \c Err, representing error and containing an error.
-/// Functions return \c Result whenever errors are expected and recoverable.
+/// # Brief
 ///
-/// A simple function returning \c Result might be defined and used like so:
+/// `Result` is a type that represents either success Ok or failure
 ///
-/// ```cpp
+/// `Result` is the type used for returning and propagating errors. It's a
+/// `std::pair` like class with the variants, `Ok`, representing success and
+/// containing a value, and `Err`, representing error and containing an error.
+/// Functions return `Result` whenever errors are expected and recoverable.
+///
+/// A simple function returning `Result` might be defined and used like so:
+///
+/// ```
 /// Result<int, const char*> parse(const char* s) {
 ///     if (std::strlen(s) < 3) {
 ///         return Err("string length is less than 3");
@@ -646,7 +621,7 @@ public:
 /// }
 /// ```
 ///
-/// \c Result has similar combinators with \c Option, see document comments for
+/// `Result` has similar combinators with `Option`, see document comments for
 /// details.
 template <typename T, typename E>
 class Result final : public detail::ResultStorage<T, E> {
@@ -666,9 +641,9 @@ public:
     ////////////////////////////////////////////////////////////////////////////
 
     /// @{
-    /// \brief Constructs from \c Ok variant
+    /// Constructs from `Ok` variant
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(42));
     /// assert(x.has_value());
     /// ```
@@ -687,9 +662,9 @@ public:
 
 
     /// @{
-    /// \brief Constructs from \c Err variant
+    /// Constructs from `Err` variant
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Err(42));
     /// assert(x.has_error());
     /// ```
@@ -708,12 +683,9 @@ public:
 
 
     /// @{
-    /// \brief Constructs from other type `Result<X, Y>` where
-    /// \c T can be constructible with \c X and
-    /// \c E can be constructible with \c Y
-    ///
-    /// \tparam X \c T can be constructed from \c X
-    /// \tparam Y \c E can be constructed from \c Y
+    /// Constructs from other type `Result<X, Y>` where
+    /// `T` can be constructible with `X` and
+    /// `E` can be constructible with `Y`
     template <typename X, typename Y,
               std::enable_if_t<!std::is_same_v<Result<X, Y>, Result<T, E>> &&
                                    std::is_constructible_v<T, X> &&
@@ -741,23 +713,23 @@ public:
 
 
     /// @{
-    /// \brief Default constructs from other results
-    /// Disabled if \c T or \c E is not \e move-constructible or \e copy-constructible
+    /// Default constructs from other results
+    /// Disabled if `T` or `E` is not move-constructible or copy-constructible
     constexpr Result(Result&&) = default;
     constexpr Result(const Result&) = default;
     /// @}
 
 
     /// @{
-    /// \brief Assigns with others
-    /// Disabled if \c T or \c E is not \e move-constructible or \e copy-constructible
+    /// Assigns with others
+    /// Disabled if `T` or `E` is not move-constructible or copy-constructible
     constexpr Result& operator=(Result&&) = default;
     constexpr Result& operator=(const Result&) = default;
     /// @}
     
 
     /// @{
-    /// \see assign
+    /// see `assign`
     constexpr Result& operator=(const Ok<T>& ok) {
         Base::assign_value(ok.value);
         return *this;
@@ -771,7 +743,7 @@ public:
 
 
     /// @{
-    /// \see assign
+    /// see `assign`
     constexpr Result& operator=(const Err<E>& err) {
         Base::assign_error(err.value);
         return *this;
@@ -785,8 +757,8 @@ public:
 
 
     /// @{
-    /// \brief Assigns with \c Ok type
-    /// Exports \c assign_value interface
+    /// Assigns with `Ok` type
+    /// Exports `assign_value` interface
     constexpr void assign(const Ok<T>& ok) {
         Base::assign_value(ok.value);
     }
@@ -797,8 +769,8 @@ public:
     /// @}
 
     /// @{
-    /// \brief Assigns with \c Err type
-    /// Exports \c assign_error interface
+    /// Assigns with `Err` type
+    /// Exports `assign_error` interface
     constexpr void assign(const Err<E>& err) {
         Base::assign_error(err.value);
     }
@@ -814,13 +786,16 @@ public:
     ////////////////////////////////////////////////////////////////////////////
 
     /// @{
-    /// \brief Maps a Result<T, E> to Result<U, E> by applying a function
-    /// to the contained \c Ok value, leaving an \c Err value untouched.
+    /// Maps a Result<T, E> to Result<U, E> by applying a function
+    /// to the contained `Ok` value, leaving an `Err` value untouched.
     ///
-    /// \tparam F :: T -> U
-    /// \return Result\<U, E\>
+    /// # Constraints
     ///
-    /// ```cpp
+    /// F :: T -> U
+    ///
+    /// # Examples
+    ///
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// const auto res = x.map([](int x) { return x + 1; });
     /// assert(res.has_value() && res.value() == 3);
@@ -840,14 +815,17 @@ public:
 
 
     /// @{
-    /// \brief Maps a Result<T, E> to U by applying a function to the contained
-    /// \c Ok value, or a fallback function to a contained \c Err value.
+    /// Maps a Result<T, E> to U by applying a function to the contained
+    /// `Ok` value, or a fallback function to a contained `Err` value.
     ///
-    /// \tparam F :: T -> U
-    /// \tparam M :: E -> U
-    /// \return U
+    /// # Constraints
     ///
-    /// ```cpp
+    /// F :: T -> U
+    /// M :: E -> U
+    ///
+    /// # Examples
+    ///
+    /// ```
     /// const int k = 21;
     ///
     /// const Result<int, int> x(Ok(2));
@@ -879,13 +857,16 @@ public:
 
 
     /// @{
-    /// \brief Maps a `Result<T, E>` to `Result<T, U>` by applying a function
-    /// to the contained \c Err value, leaving an \c Ok value untouched.
+    /// Maps a `Result<T, E>` to `Result<T, U>` by applying a function
+    /// to the contained `Err` value, leaving an `Ok` value untouched.
     ///
-    /// \tparam F :: E -> U
-    /// \return Result\<T, U\>
+    /// # Constraints
     ///
-    /// ```cpp
+    /// F :: E -> U
+    ///
+    /// # Examples
+    ///
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// const auto res = x.map_err([](int x) { return x + 1; });
     /// assert(!res.has_error());
@@ -909,13 +890,16 @@ public:
 
 
     /// @{
-    /// \brief Calls \c f if the result is \c Ok, otherwise returns the \c Err
-    /// value of self.
+    /// Calls `f` if the result is `Ok`, otherwise returns the `Err` value of
+    /// self.
     ///
-    /// \tparam F :: T -> U
-    /// \return U \c Result type
+    /// # Constraints
     ///
-    /// ```cpp
+    /// F :: T -> U
+    ///
+    /// # Examples
+    ///
+    /// ```
     /// Result<int, int> sq(int x) {
     ///     return Ok(x * x);
     /// }
@@ -951,13 +935,16 @@ public:
 
 
     /// @{
-    /// \brief Calls \c f if the result is \c Err, otherwise returns the
-    /// \c Ok value of self.
+    /// Calls `f` if the result is `Err`, otherwise returns the `Ok` value of
+    /// self.
     ///
-    /// \tparam F :: E -> U
-    /// \return U \c Result type
+    /// # Constraints
     ///
-    /// ```cpp
+    /// F :: E -> U
+    ///
+    /// # Examples
+    ///
+    /// ```
     /// Result<int, int> sq(int x) {
     ///     return Ok(x * x);
     /// }
@@ -996,10 +983,10 @@ public:
     // Utilities
     ///////////////////////////////////////////////////////////////////////////
 
-    /// \brief Returns \c true if the result is an \c Ok value containing the
+    /// Returns `true` if the result is an `Ok` value containing the
     /// given value.
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// assert(x.contains(2));
     /// assert(!x.contains(3));
@@ -1014,10 +1001,10 @@ public:
     }
 
 
-    /// \brief Returns \c true if the result is an \c Err value containing the
+    /// Returns `true` if the result is an `Err` value containing the
     /// given value.
     ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// assert(!x.contains_err(2));
     ///
@@ -1035,12 +1022,10 @@ public:
 
 
     /// @{
-    /// \brief Converts from `Result<T, E>` to `Option<T>`
+    /// Converts from `Result<T, E>` to `Option<T>`
     /// If it's an error, discards the error value.
     ///
-    /// \return Option\<T\>
-    ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// const auto optx = x.ok();
     /// assert(optx.has_value() && optx.value() == 2);
@@ -1060,12 +1045,10 @@ public:
 
 
     /// @{
-    /// \brief Converts from `Result<T, E>` to `Option<E>`
+    /// Converts from `Result<T, E>` to `Option<E>`
     /// If it's an ok, discards the ok value.
     ///
-    /// \return Option\<E\>
-    ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// const auto optx = x.err();
     /// assert(!optx.has_value());
@@ -1084,10 +1067,9 @@ public:
     /// @}
 
 
-    /// \brief Inplacement constructs from args
-    /// \return T&
+    /// Inplacement constructs from args
     ///
-    /// ```cpp
+    /// ```
     /// Result<std::string, int> x(Err(2));
     /// assert(x.has_error() && x.error() == 2);
     /// 
@@ -1101,9 +1083,9 @@ public:
         return Base::value();
     }
 
-    /// \brief Returns \c true if the result is \c Ok variant
+    /// Returns `true` if the result is `Ok` variant
     ///
-    /// ```cpp
+    /// ```
     /// Result<int, int> res = Ok(3);
     /// assert(res.has_value());
     ///
@@ -1114,9 +1096,9 @@ public:
         return Base::which() == detail::Which::Value;
     }
 
-    /// \brief Returns \c true if the result is \c Err variant
+    /// Returns `true` if the result is `Err` variant
     ///
-    /// ```cpp
+    /// ```
     /// Result<int, int> err_res = Err(3);
     /// assert(err_res.has_error());
     /// ```
@@ -1126,17 +1108,14 @@ public:
 
 
     /// @{
-    /// \brief Unwraps a result, yielding the content of an \c Ok.
-    /// Else, it returns \c deft
+    /// Unwraps a result, yielding the content of an `Ok`.
+    /// Else, it returns `deft`
     ///
-    /// Arguments passed to \c value_or are eagerly evaluated; if you are
+    /// Arguments passed to `value_or` are eagerly evaluated; if you are
     /// passing the result of a function call, it is recommended to use
-    /// \c value_or_else, which is lazily evaluated.
+    /// `value_or_else`, which is lazily evaluated.
     ///
-    /// \return T
-    /// \see value_or_else
-    ///
-    /// ```cpp
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// assert(x.value_or(3) == 2);
     ///
@@ -1158,13 +1137,16 @@ public:
 
 
     /// @{
-    /// \brief Unwraps a result, yielding the content of an \c Ok
-    /// If the value is an \c Err, then it calls \c f with its \c Err
+    /// Unwraps a result, yielding the content of an `Ok`
+    /// If the value is an `Err`, then it calls `f` with its `Err`
     ///
-    /// \tparam F :: E -> T
-    /// \return T
+    /// # Constraints
     ///
-    /// ```cpp
+    /// F :: E -> T
+    ///
+    /// # Examples
+    ///
+    /// ```
     /// const Result<int, int> x(Ok(2));
     /// const int resx = x.value_or_else([](int x) { return x; });
     /// assert(resx == 2);
@@ -1192,8 +1174,9 @@ public:
 
 
     /// @{
-    /// \brief Unwraps a result, yielding the content of an \c Ok
-    /// \throw BadResultAccess
+    /// Unwraps a result, yielding the content of an `Ok`
+    ///
+    /// Throws BadResultAccess when the result is `Err`
     constexpr T& value() & {
         value_required();
         return Base::value();
@@ -1217,9 +1200,9 @@ public:
 
 
     /// @{
-    /// \brief Unwraps a result, yielding the content of an \c Ok
-    /// \param s exception description
-    /// \throw BadResultAccess
+    /// Unwraps a result, yielding the content of an `Ok`
+    ///
+    /// Throws BadResultAccess with description when the result is `Err`
     constexpr const T& expect(const char* s) const& {
         value_required(s);
         return Base::value();
@@ -1233,8 +1216,9 @@ public:
 
 
     /// @{
-    /// \brief Unwraps a result, yielding the content of an \c Err
-    /// \throw BadResultAccess
+    /// Unwraps a result, yielding the content of an `Err`
+    ///
+    /// Throws BadResultAccess when the result is `Ok`
     constexpr E& error() & {
         error_required();
         return Base::error();
@@ -1258,9 +1242,9 @@ public:
 
 
     /// @{
-    /// \brief Unwraps a result, yielding the content of an \c Err
-    /// \param s exception description
-    /// \throw BadResultAccess
+    /// Unwraps a result, yielding the content of an `Err`
+    ///
+    /// Throws BadResultAccess with description when the result is `Ok`
     constexpr const E& expect_err(const char* s) const& {
         error_required(s);
         return Base::error();
@@ -1272,17 +1256,15 @@ public:
     }
     /// @}
 
-    /// \brief Checks whether the result is \c Ok or not
-    /// \return \c true => Ok\n
-    ///         \c false => Err
-    /// \see has_value
+    /// Checks whether the result is `Ok` or not
     explicit constexpr operator bool() const noexcept {
         return has_value();
     }
 
     /// @{
-    /// \brief Dereference makes it more like a pointer
-    /// \throw BadResultAccess
+    /// Dereference makes it more like a pointer
+    ///
+    /// Throws BadResultAccess when the result is `Err`
     constexpr T& operator*() & {
         return value();
     }
@@ -1301,8 +1283,9 @@ public:
     /// @}
 
     /// @{
-    /// \brief Arrow operator makes it more like a pointer
-    /// \throw BadResultAccess
+    /// Arrow operator makes it more like a pointer
+    ///
+    /// Throws BadResultAccess when the result is `Err`
     constexpr const T* operator->() const {
         return std::addressof(value());
     }
@@ -1314,10 +1297,8 @@ public:
 
 
     /// @{
-    /// \brief Returns the pointer to internal storage
-    /// If it's an \c Err, \c nullptr is returned.
-    ///
-    /// \return T* or \c nullptr
+    /// Returns the pointer to internal storage
+    /// If it's an `Err`, `nullptr` is returned.
     constexpr T* get_pointer() & noexcept {
         return has_value() ? std::addressof(Base::value()) : nullptr;
     }
@@ -1330,8 +1311,7 @@ public:
     /// @}
 
 
-    /// \brief Swaps with other results
-    /// \note \c Base::value and \c Base::error are noexcept
+    /// Swaps with other results
     constexpr void swap(Result& rhs) noexcept(
         detail::all_of_v<std::is_nothrow_swappable, T, E>) {
         using std::swap;
@@ -1381,8 +1361,9 @@ private:
 };
 
 
-/// \brief Swaps Results
-/// \see Result\<T, E\>::swap
+/// Swaps Results
+///
+/// see `Result<T, E>::swap` for details
 template <typename T, typename E>
 constexpr void swap(Result<T, E>& lhs, Result<T, E>& rhs) noexcept(
     detail::all_of_v<std::is_nothrow_swappable, T, E>) {
@@ -1391,7 +1372,7 @@ constexpr void swap(Result<T, E>& lhs, Result<T, E>& rhs) noexcept(
 
 
 /// @{
-/// \brief Comparison with others
+/// Comparison with others
 template <
     typename T, typename E,
     std::enable_if_t<is_equality_comparable_v<T> && is_equality_comparable_v<E>,
@@ -1466,8 +1447,8 @@ inline constexpr bool operator>=(const Result<T, E>& lhs,
 
 
 /// @{
-/// \brief Specialized comparisons with \c Ok Type
-/// \c Ok is in the right
+/// Specialized comparisons with `Ok` Type
+/// `Ok` is in the right
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<T>, int> = 0>
 inline constexpr bool operator==(const Result<T, E>& lhs, const Ok<T>& rhs) {
@@ -1506,8 +1487,8 @@ inline constexpr bool operator>=(const Result<T, E>& lhs, const Ok<T>& rhs) {
 /// @}
 
 /// @{
-/// \brief Specialized comparisons with \c Ok Type
-/// \c Ok is in the left
+/// Specialized comparisons with `Ok` Type
+/// `Ok` is in the left
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<T>, int> = 0>
 inline constexpr bool operator==(const Ok<T>& lhs, const Result<T, E>& rhs) {
@@ -1547,8 +1528,8 @@ inline constexpr bool operator>=(const Ok<T>& lhs, const Result<T, E>& rhs) {
 
 
 /// @{
-/// \brief Specialized comparisons with \c Err Type
-/// \c Err is in the right
+/// Specialized comparisons with `Err` Type
+/// `Err` is in the right
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<E>, int> = 0>
 inline constexpr bool operator==(const Result<T, E>& lhs, const Err<E>& rhs) {
@@ -1587,8 +1568,8 @@ inline constexpr bool operator>=(const Result<T, E>& lhs, const Err<E>& rhs) {
 /// @}
 
 /// @{
-/// \brief Specialized comparisons with \c Err Type
-/// \c Err is in the left
+/// Specialized comparisons with `Err` Type
+/// `Err` is in the left
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<E>, int> = 0>
 inline constexpr bool operator==(const Err<E>& lhs, const Result<T, E>& rhs) {
