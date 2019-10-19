@@ -125,11 +125,11 @@ public:
         new (&stg_) T(std::forward<Args>(args)...);
     }
 
-    constexpr Uninitialized(T&& val) {
+    constexpr explicit Uninitialized(T&& val) {
         new (&stg_) T(std::move(val));
     }
 
-    constexpr Uninitialized(const T& val) {
+    constexpr explicit Uninitialized(const T& val) {
         new (&stg_) T(val);
     }
 
@@ -168,9 +168,9 @@ public:
     constexpr Uninitialized(std::in_place_t, Args&&... args)
         : value_(std::forward<Args>(args)...) {}
 
-    constexpr Uninitialized(T&& val) : value_(std::move(val)) {}
+    constexpr explicit Uninitialized(T&& val) : value_(std::move(val)) {}
 
-    constexpr Uninitialized(const T& val) : value_(val) {}
+    constexpr explicit Uninitialized(const T& val) : value_(val) {}
 
     template <typename... Args>
     constexpr T& emplace(Args&&... args) {
@@ -226,9 +226,9 @@ public:
 ///     try {
 ///         s1.append(s2);
 ///     } catch (const std::length_error& ex) {
-///         return {std::current_exception()};
+///         return Try<std::string>{std::current_exception()};
 ///     }
-///     return {std::move(s1)};
+///     return Try<std::string>{std::move(s1)};
 /// }
 /// ```
 template <typename T>

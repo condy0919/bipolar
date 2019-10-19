@@ -50,7 +50,7 @@ public:
     OptionEmptyException()
         : std::runtime_error("Empty Option cannot be unwrapped") {}
 
-    OptionEmptyException(const char* s) : std::runtime_error(s) {}
+    explicit OptionEmptyException(const char* s) : std::runtime_error(s) {}
 };
 
 /// None variant of `Option`
@@ -136,7 +136,7 @@ public:
     /// ```
     constexpr Option() noexcept {}
 
-    constexpr Option(detail::None) noexcept {}
+    constexpr /*implicit*/ Option(detail::None) noexcept {}
     /// @}
 
     /// @{
@@ -146,12 +146,12 @@ public:
     /// const Option<int> opt(42);
     /// assert(opt.has_value());
     /// ```
-    constexpr Option(T&& val) noexcept(
+    constexpr /*implicit*/ Option(T&& val) noexcept(
         std::is_nothrow_move_constructible_v<T>) {
         construct(std::move(val));
     }
 
-    constexpr Option(const T& val) noexcept(
+    constexpr /*implicit*/ Option(const T& val) noexcept(
         std::is_nothrow_copy_constructible_v<T>) {
         construct(val);
     }
@@ -162,7 +162,7 @@ public:
     constexpr Option(Option&& rhs) noexcept(
         std::is_nothrow_move_constructible_v<T>) {
         if (rhs.has_value()) {
-            construct(std::move(rhs.value()));
+            construct(std::move(rhs.storage_.value));
             rhs.clear();
         }
     }
@@ -170,7 +170,7 @@ public:
     constexpr Option(const Option& rhs) noexcept(
         std::is_nothrow_copy_constructible_v<T>) {
         if (rhs.has_value()) {
-            construct(rhs.value());
+            construct(rhs.storage_.value);
         }
     }
     /// @}
@@ -184,7 +184,7 @@ public:
     /// res.assign(None);
     /// assert(!res.has_value());
     /// ```
-    constexpr void assign(detail::None) {
+    constexpr void assign(detail::None) noexcept {
         clear();
     }
 
@@ -818,7 +818,8 @@ inline constexpr bool operator!=(const Option<T>& lhs, const Option<T>& rhs) {
 template <typename T>
 inline constexpr bool operator<(const Option<T>& lhs, const Option<T>& rhs) {
     if (lhs.has_value() != rhs.has_value()) {
-        return lhs.has_value() < rhs.has_value();
+        return static_cast<int>(lhs.has_value()) <
+               static_cast<int>(rhs.has_value());
     }
     if (lhs.has_value()) {
         return lhs.value() < rhs.value();

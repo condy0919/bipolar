@@ -38,9 +38,9 @@ class Result;
 /// Ok variant of `Result`
 template <typename T>
 struct Ok {
-    constexpr Ok(T&& val) : value(std::move(val)) {}
+    constexpr /*implicit*/ Ok(T&& val) : value(std::move(val)) {}
 
-    constexpr Ok(const T& val) : value(val) {}
+    constexpr /*implicit*/ Ok(const T& val) : value(val) {}
 
     template <typename E>
     constexpr Result<T, E> into() && {
@@ -53,9 +53,9 @@ struct Ok {
 /// Err variant of `Result`
 template <typename E>
 struct Err {
-    constexpr Err(E&& val) : value(std::move(val)) {}
+    constexpr /*implicit*/ Err(E&& val) : value(std::move(val)) {}
 
-    constexpr Err(const E& val) : value(val) {}
+    constexpr /*implicit*/ Err(const E& val) : value(val) {}
 
     template <typename T>
     constexpr Result<T, E> into() && {
@@ -649,13 +649,13 @@ public:
     /// ```
     template <bool C = true,
               std::enable_if_t<C && std::is_move_constructible_v<T>, int> = 0>
-    constexpr Result(Ok<T>&& ok) noexcept(
+    constexpr /*implicit*/ Result(Ok<T>&& ok) noexcept(
         std::is_nothrow_move_constructible_v<T>)
         : Base{detail::ValueTag{}, std::move(ok.value)} {}
 
     template <bool C = true,
               std::enable_if_t<C && std::is_copy_constructible_v<T>, int> = 0>
-    constexpr Result(const Ok<T>& ok) noexcept(
+    constexpr /*implicit*/ Result(const Ok<T>& ok) noexcept(
         std::is_nothrow_copy_constructible_v<T>)
         : Base{detail::ValueTag{}, ok.value} {}
     /// @}
@@ -670,13 +670,13 @@ public:
     /// ```
     template <bool C = true,
               std::enable_if_t<C && std::is_move_constructible_v<E>, int> = 0>
-    constexpr Result(Err<E>&& err) noexcept(
+    constexpr /*implicit*/ Result(Err<E>&& err) noexcept(
         std::is_nothrow_move_constructible_v<E>)
         : Base{detail::ErrorTag{}, std::move(err.value)} {}
 
     template <bool C = true,
               std::enable_if_t<C && std::is_copy_constructible_v<E>, int> = 0>
-    constexpr Result(const Err<E>& err) noexcept(
+    constexpr /*implicit*/ Result(const Err<E>& err) noexcept(
         std::is_nothrow_copy_constructible_v<E>)
         : Base{detail::ErrorTag{}, err.value} {}
     /// @}
