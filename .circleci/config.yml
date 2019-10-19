@@ -44,7 +44,7 @@ jobs:
     steps:
       - sysinfo
       - install-bazel
-      - install-kcov
+      # - install-kcov
       - checkout
       - run:
           name: Building
@@ -52,11 +52,11 @@ jobs:
       - run:
           name: Testing
           command: bazel test //... -j $(nproc) --test_tag_filters='-io_uring'
-      - run:
-          name: Testing with code coverage reports
-          command: |
-            bazel test --config=kcov //... --test_tag_filters='-io_uring,-benchmark' --experimental_local_memory_estimate
-            bash <(curl -s https://codecov.io/bash) -s bazel-out
+      # - run:
+      #     name: Testing with code coverage reports
+      #     command: |
+      #       bazel test --config=kcov //... --test_tag_filters='-io_uring,-benchmark' --experimental_local_memory_estimate
+      #       bash <(curl -s https://codecov.io/bash) -s bazel-out
 
 workflows:
   version: 2
