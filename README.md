@@ -1,7 +1,7 @@
-[![Build Status][circle-badge]](circle-link)
-[![Codacy Badge][codacy-badge]](codacy-link)
+[![Build Status][circle-badge]][circle-link]
+[![Codacy Badge][codacy-badge]][codacy-link]
 [![MIT License][license-badge]](LICENSE)
-[![Language][language-badge]](language-link)
+[![Language][language-badge]][language-link]
 
 # bipolar
 
@@ -31,4 +31,5 @@ to run tests.
 [codacy-link]: https://www.codacy.com/manual/condy0919/bipolar?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=condy0919/bipolar&amp;utm_campaign=Badge_Grade
 [license-badge]: https://img.shields.io/badge/license-MIT-007EC7.svg
 [language-badge]: https://img.shields.io/badge/Language-C%2B%2B17-blue.svg
-[language-link]: https://en.cppreference.com/w/cpp/compiler_support<Paste>
+[language-link]: https://en.cppreference.com/w/cpp/compiler_support
+
