@@ -1,0 +1,13 @@
+### Kcov coverage build. ###
+build:kcov --build_tests_only
+build:kcov -c dbg
+build:kcov --spawn_strategy=standalone
+build:kcov --run_under //tools/dynamic_analysis:kcov
+build:kcov --local_test_jobs=1
+build:kcov --test_tag_filters=-benchmark
+build:kcov --nocache_test_results
+# These increased timeouts were set through experimentation. Because kcov runs
+# in a separate process from the main program, the OS has to context-switch
+# between the processes every time a line is hit, slowing down execution
+# significantly. Timeouts are 3.5x default values.
+build:kcov --test_timeout=210,1050,3150,12600

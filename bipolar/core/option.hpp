@@ -101,7 +101,7 @@ Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
 /// }
 ///
 /// const auto result = divide(1, 0);
-/// assert(result.has_value());
+/// assert(!result.has_value());
 /// ```
 ///
 /// Indicate an error instead of using out parameter and bool return value
@@ -328,7 +328,7 @@ public:
     }
 
     /// @{
-    /// Unwraps an option, yeilding the content of a `Some`
+    /// Unwraps an option, yielding the content of a `Some`
     ///
     /// throws `OptionEmptyException` if option is `None`
     constexpr T& value() & {
@@ -353,7 +353,7 @@ public:
     /// @}
 
     /// @{
-    /// Unwraps an option, yeilding the content of a `Some`
+    /// Unwraps an option, yielding the content of a `Some`
     ///
     /// throws OptionEmptyException with custom message if option is `None`
     constexpr const T& expect(const char* s) const& {
