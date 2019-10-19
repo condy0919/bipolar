@@ -205,7 +205,7 @@ public:
     constexpr void assign(const Option& rhs) noexcept(
         std::is_nothrow_copy_constructible_v<T>) {
         if (rhs.has_value()) {
-            assign(rhs.value());
+            assign(rhs.storage_.value);
         } else {
             clear();
         }
@@ -741,7 +741,8 @@ private:
     }
 
     template <typename... Args>
-    constexpr void construct(Args&&... args) {
+    constexpr void construct(Args&&... args) noexcept(
+        std::is_nothrow_constructible_v<T, Args...>) {
         const void* ptr = std::addressof(storage_.value);
         new (const_cast<void*>(ptr)) T(std::forward<Args>(args)...);
         storage_.has_value = true;
