@@ -1,7 +1,30 @@
-//! FunctionRef: a non-owning reference to a callable object
+//! FunctionRef
 //!
-//! see http://open-std.org/JTC1/SC22/WG21/docs/papers/2018/p0792r2.html for
-//! details
+//! # Brief
+//!
+//! `FunctionRef` is an efficient, type-erasing, non-owning reference to
+//! a callable. This is intended for use as the type of a function parameter
+//! that is not used after the function in question returns.
+//!
+//! This class does not own the callable, so it is not in general safe to store
+//! a `FunctionRef`.
+//!
+//! see `FunctionRef` [`Proposal`] for details
+//!
+//! # Examples
+//!
+//! A basic usage
+//!
+//! ```
+//! const int k = 13;
+//! FunctionRef<int(int)> addk = [k](int x) { return x + k; };
+//!
+//! assert(addk(20) == 33);
+//! assert(addk(10) == 23);
+//! ```
+//!
+//! [`Proposal`]: http://open-std.org/JTC1/SC22/WG21/docs/papers/2018/p0792r2.html
+//!
 
 #ifndef BIPOLAR_CORE_FUNCTION_REF_HPP_
 #define BIPOLAR_CORE_FUNCTION_REF_HPP_
