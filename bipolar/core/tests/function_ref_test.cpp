@@ -141,31 +141,3 @@ TEST(FunctionRef, OverloadedFunctor) {
     FunctionRef<int(int, std::vector<int> const&)> const cvariant6const = cof;
     EXPECT_EQ(100 + 6 * 21, cvariant6const(21, {}));
 }
-
-TEST(FunctionRef, basic) {
-    {
-        FunctionRef<void(void)> f = []() { EXPECT_TRUE(true); };
-        f();
-    }
-
-    {
-        FunctionRef<int(int)> add1 = [](int x) { return x + 1; };
-        EXPECT_EQ(add1(41), 42);
-    }
-
-    {
-        FunctionRef<void(int&)> add1_inplace = [](int& x) { ++x; };
-        
-        int x = 41;
-        add1_inplace(x);
-        EXPECT_EQ(x, 42);
-    }
-}
-
-TEST(FunctionRef, member_function) {
-    const std::string s = "1234567890";
-
-    FunctionRef<std::size_t(const std::string&)> length =
-        std::mem_fn(&std::string::length);
-    EXPECT_EQ(length(s), s.length());
-}

@@ -17,7 +17,8 @@
 //!
 //! ```
 //! const int k = 13;
-//! FunctionRef<int(int)> addk = [k](int x) { return x + k; };
+//! const auto l = [k](int x) { return x + k; };
+//! FunctionRef<int(int)> addk = l;
 //!
 //! assert(addk(20) == 33);
 //! assert(addk(10) == 23);
