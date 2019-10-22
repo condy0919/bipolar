@@ -1,11 +1,11 @@
-package(default_visibility = ['//visibility:public'])
+package(default_visibility = ["//visibility:public"])
 
-licenses(['notice'])
+licenses(["notice"])
 
 config_setting(
-    name = 'llvm_compiler',
+    name = "llvm_compiler",
     flag_values = {
-        '@bazel_tools//tools/cpp:compiler': 'llvm',
+        "@bazel_tools//tools/cpp:compiler": "llvm",
     },
-    visibility = [':__subpackages__'],
+    visibility = [":__subpackages__"],
 )

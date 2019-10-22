@@ -1,61 +1,76 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load(
-    '//bipolar:copts/configure_copts.bzl',
-    'BIPOLAR_DEFAULT_COPTS',
-    'BIPOLAR_DEFAULT_LINKOPTS',
-    'BIPOLAR_TEST_COPTS',
+    "//bipolar:copts/configure_copts.bzl",
+    "BIPOLAR_DEFAULT_COPTS",
+    "BIPOLAR_DEFAULT_LINKOPTS",
+    "BIPOLAR_TEST_COPTS",
 )
 
-package(default_visibility = ['//visibility:public'])
+package(default_visibility = ["//visibility:public"])
 
-licenses(['notice'])
+licenses(["notice"])
 
 cc_library(
-    name = 'core',
+    name = "core",
     srcs = [
     ],
     hdrs = [
-        'void.hpp',
-        'traits.hpp',
-        'option.hpp',
-        'result.hpp',
-        'overload.hpp',
-        'byteorder.hpp',
-        'try.hpp',
-        'function_ref.hpp',
+        "byteorder.hpp",
+        "function_ref.hpp",
+        "option.hpp",
+        "overload.hpp",
+        "result.hpp",
+        "traits.hpp",
+        "try.hpp",
+        "void.hpp",
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
 )
 
 cc_test(
-    name = 'core_test',
+    name = "core_test",
     srcs = [
-        'tests/option_test.cpp',
-        'tests/result_test.cpp',
-        'tests/traits_test.cpp',
-        'tests/overload_test.cpp',
-        'tests/byteorder_test.cpp',
-        'tests/try_test.cpp',
-        'tests/function_ref_test.cpp',
+        "tests/byteorder_test.cpp",
+        "tests/function_ref_test.cpp",
+        "tests/option_test.cpp",
+        "tests/overload_test.cpp",
+        "tests/result_test.cpp",
+        "tests/traits_test.cpp",
+        "tests/try_test.cpp",
     ],
     copts = BIPOLAR_TEST_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
     deps = [
-        ':core',
-        '@gtest//:gtest_main',
+        ":core",
+        "@gtest//:gtest_main",
     ],
 )
 
 cc_test(
-    name = 'option_benchmark',
+    name = "option_benchmark",
     srcs = [
-        'benchmarks/option_benchmark.cpp',
+        "benchmarks/option_benchmark.cpp",
     ],
     copts = BIPOLAR_TEST_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
-    tags = ['benchmark'],
+    tags = ["benchmark"],
     deps = [
-        ':core',
-        '@benchmark//:benchmark_main',
-    ]
+        ":core",
+        "@benchmark//:benchmark_main",
+    ],
+)
+
+cc_test(
+    name = "function_ref_benchmark",
+    srcs = [
+        "benchmarks/function_ref_benchmark.cpp",
+    ],
+    copts = BIPOLAR_TEST_COPTS,
+    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
+    tags = ["benchmark"],
+    deps = [
+        ":core",
+        "@benchmark//:benchmark_main",
+    ],
 )
