@@ -11,7 +11,6 @@ static void do_benchmark(benchmark::State& state, Maker make) {
         return i;
     };
 
-    auto it = state.begin();
     for (auto _ : state) {
         auto f = make(lambda);
         benchmark::DoNotOptimize(f(_));
