@@ -16,6 +16,7 @@ cc_library(
     hdrs = [
         "byteorder.hpp",
         "function_ref.hpp",
+        "likely.hpp",
         "option.hpp",
         "overload.hpp",
         "result.hpp",
