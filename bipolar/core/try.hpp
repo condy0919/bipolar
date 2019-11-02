@@ -156,7 +156,7 @@ public:
     }
 
 private:
-    std::aligned_storage_t<sizeof(T), alignof(T)> stg_;
+    std::aligned_union_t<0, T> stg_;
 };
 
 template <typename T>
