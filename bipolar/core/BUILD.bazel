@@ -15,6 +15,7 @@ cc_library(
     ],
     hdrs = [
         "byteorder.hpp",
+        "function.hpp",
         "function_ref.hpp",
         "likely.hpp",
         "option.hpp",
@@ -33,6 +34,7 @@ cc_test(
     srcs = [
         "tests/byteorder_test.cpp",
         "tests/function_ref_test.cpp",
+        "tests/function_test.cpp",
         "tests/option_test.cpp",
         "tests/overload_test.cpp",
         "tests/result_test.cpp",
@@ -65,6 +67,20 @@ cc_test(
     name = "function_ref_benchmark",
     srcs = [
         "benchmarks/function_ref_benchmark.cpp",
+    ],
+    copts = BIPOLAR_TEST_COPTS,
+    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
+    tags = ["benchmark"],
+    deps = [
+        ":core",
+        "@benchmark//:benchmark_main",
+    ],
+)
+
+cc_test(
+    name = "function_benchmark",
+    srcs = [
+        "benchmarks/function_benchmark.cpp",
     ],
     copts = BIPOLAR_TEST_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
