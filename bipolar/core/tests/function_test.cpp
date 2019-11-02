@@ -57,8 +57,14 @@ TEST(Function, Simple) {
     EXPECT_EQ(1065, chf(6));
     EXPECT_EQ(1072, chf(7));
 
-    Function<int()> empty;
-    EXPECT_THROW(empty(), std::bad_function_call);
+    Function<int(int)> empty;
+    EXPECT_EQ(empty, nullptr);
+    EXPECT_THROW(empty(0), std::bad_function_call);
+
+    Function<int(int)> add1([](int x) { return ++x; });
+    swap(empty, add1);
+    EXPECT_NE(empty, nullptr);
+    EXPECT_EQ(44, empty(43));
 }
 
 TEST(Function, FunctionPtr) {

@@ -69,6 +69,12 @@ template <typename R, typename... Args>
 class Function<R(Args...)> {
     using InsituType = void* [8];
 
+    template <typename F>
+    inline static constexpr bool
+        Insitu = sizeof(F) <= sizeof(InsituType) &&
+                 alignof(F) <= alignof(InsituType) &&
+                 std::is_nothrow_move_constructible_v<F>;
+
     struct Vtable {
         void (*destroy)(const Function* pf);
         R (*call)(const Function* pf, Args...);
@@ -87,9 +93,8 @@ public:
     /// ```
     Function() noexcept {
         struct Op {
-            static constexpr void move(const Function*, const Function*) {}
-            static constexpr void destroy(const Function*) {}
-            static constexpr R call(const Function*, Args...) {
+            static void destroy(const Function*) {}
+            static R call(const Function*, Args...) {
                 throw std::bad_function_call();
             }
         };
@@ -129,17 +134,14 @@ public:
     /// ```
     template <
         typename F,
-        bool Insitu = sizeof(F) <= sizeof(InsituType) &&
-                      std::is_nothrow_move_constructible_v<F>,
         std::enable_if_t<
             std::is_invocable_r_v<R, F, Args...> &&
                 !std::is_same_v<std::remove_cv_t<std::remove_reference_t<F>>,
                                 Function>,
             int> = 0>
-    explicit Function(F&& f) noexcept(Insitu)
-        : Function(
-              std::move(f),
-              std::conditional_t<Insitu, std::true_type, std::false_type>{}) {}
+    explicit Function(F&& f) noexcept(Insitu<F>)
+        : Function(std::move(f), std::conditional_t<Insitu<F>, std::true_type,
+                                                    std::false_type>{}) {}
 
     /// `Function` move constructor
     Function(Function&& rhs) noexcept : Function() {
@@ -157,14 +159,12 @@ public:
     /// see `Function::Function` for details
     template <
         typename F,
-        bool Insitu = sizeof(F) <= sizeof(InsituType) &&
-                      std::is_nothrow_move_constructible_v<F>,
         std::enable_if_t<
             std::is_invocable_r_v<R, F, Args...> &&
                 !std::is_same_v<std::remove_cv_t<std::remove_reference_t<F>>,
                                 Function>,
             int> = 0>
-    Function& operator=(F&& f) noexcept(Insitu) {
+    Function& operator=(F&& f) noexcept(Insitu<F>) {
         Function(std::move(f)).swap(*this);
         return *this;
     }
@@ -183,17 +183,17 @@ public:
 
     /// Invokes the function targeted
     /// Throws a `std::bad_function_call` exception if `!bool(*this)`
-    constexpr R operator()(Args... args) const {
+    R operator()(Args... args) const {
         return vtbl_->call(this, std::forward<Args>(args)...);
     }
 
     /// Determines if the `Function` wrapper has a target
-    explicit constexpr operator bool() const noexcept {
-        return vtbl_->avail;
+    explicit operator bool() const noexcept {
+        return avail_;
     }
 
     /// Swaps the targets of two `Function` objects
-    constexpr void swap(Function& rhs) noexcept {
+    void swap(Function& rhs) noexcept {
         std::swap(vtbl_, rhs.vtbl_);
         std::swap(avail_, rhs.avail_);
         std::swap(stg_, rhs.stg_);
@@ -204,23 +204,28 @@ private:
     template <typename F>
     explicit Function(F&& f, std::true_type) noexcept {
         struct Op {
-            static constexpr F* access(const Function* pf) {
+            static F* access(const Function* pf) {
+                return static_cast<F*>(const_cast<void*>(
+                    static_cast<const void*>(&pf->stg_.insitu_)));
+            }
+
+            static F* access(Function* pf) {
                 return static_cast<F*>(static_cast<void*>(&pf->stg_.insitu_));
             }
 
-            static constexpr void init(const Function* pf, F&& f) {
+            static void init(Function* pf, F&& f) {
                 new (const_cast<void*>(static_cast<const void*>(access(pf))))
                     F(std::move(f));
             }
 
-            static constexpr void destroy(const Function* pf) {
+            static void destroy(const Function* pf) {
                 (void)pf;
                 if constexpr (!std::is_trivially_destructible_v<F>) {
                     access(pf)->~F();
                 }
             }
 
-            static constexpr R call(const Function* pf, Args... args) {
+            static R call(const Function* pf, Args... args) {
                 return (*access(pf))(std::forward<Args>(args)...);
             }
         };
@@ -239,19 +244,19 @@ private:
     template <typename F>
     explicit Function(F&& f, std::false_type) {
         struct Op {
-            static constexpr F* access(const Function* pf) {
-                return static_cast<F*>(pf->stg_.ptr_);
+            static F* access(const Function* pf) {
+                return static_cast<F*>(const_cast<void*>(pf->stg_.ptr_));
             }
 
-            static constexpr void init(const Function* pf, F&& f) {
+            static void init(Function* pf, F&& f) {
                 pf->stg_.ptr_ = new F(std::move(f));
             }
 
-            static constexpr void destroy(const Function* pf) {
+            static void destroy(const Function* pf) {
                 delete access(pf);
             }
 
-            static constexpr R call(const Function* pf, Args... args) {
+            static R call(const Function* pf, Args... args) {
                 return (*access(pf))(std::forward<Args>(args)...);
             }
         };
@@ -269,7 +274,7 @@ private:
 private:
     const Vtable* vtbl_;
     bool avail_;
-    mutable union {
+    union {
         void* ptr_;
         std::aligned_union_t<0, InsituType> insitu_;
     } stg_;
