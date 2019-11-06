@@ -1,44 +1,45 @@
 load(
-    '//bipolar:copts/configure_copts.bzl',
-    'BIPOLAR_DEFAULT_COPTS',
-    'BIPOLAR_DEFAULT_LINKOPTS',
-    'BIPOLAR_TEST_COPTS',
+    "//bipolar:copts/configure_copts.bzl",
+    "BIPOLAR_DEFAULT_COPTS",
+    "BIPOLAR_DEFAULT_LINKOPTS",
+    "BIPOLAR_TEST_COPTS",
 )
 
-package(default_visibility = ['//visibility:public'])
+package(default_visibility = ["//visibility:public"])
 
-licenses(['notice'])
+licenses(["notice"])
 
 cc_library(
-    name = 'async',
-    hdrs = [
-        'pipe.hpp',
-        'properties.hpp',
-        'receiver/traits.hpp',
-        'receiver/receiver.hpp',
-        'receiver/primitive.hpp',
-        'receiver/callback.hpp',
-    ],
+    name = "async",
     srcs = [
+    ],
+    hdrs = [
+        "pipe.hpp",
+        "properties.hpp",
+        "receiver/callback.hpp",
+        "receiver/primitive.hpp",
+        "receiver/receiver.hpp",
+        "receiver/traits.hpp",
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
     deps = [
-        '//bipolar/core:core',
-        '@boost//:mp11'
+        "//bipolar/core",
+        "@boost//:mp11",
     ],
 )
 
 cc_test(
-    name = 'async_test',
+    name = "async_test",
     srcs = [
-        'tests/properties_test.cpp',
-        'tests/pipe_test.cpp',
+        "tests/pipe_test.cpp",
+        "tests/properties_test.cpp",
+        "tests/receiver_test.cpp",
     ],
     copts = BIPOLAR_TEST_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
     deps = [
-        ':async',
-        '@gtest//:gtest_main',
+        ":async",
+        "@gtest//:gtest_main",
     ],
 )

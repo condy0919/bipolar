@@ -21,6 +21,10 @@ std::ostream& operator<<(std::ostream& os, const Option<T>& opt) {
 TEST(Option, ConstexprConstructible) {
     constexpr Option<int> opt(None);
     EXPECT_FALSE(opt.has_value());
+
+    constexpr Option<int> c(10);
+    int arr[c.value()];
+    EXPECT_EQ(std::size(arr), 10);
 }
 
 TEST(Option, Reset) {

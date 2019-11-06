@@ -16,18 +16,21 @@
 
 
 namespace bipolar {
+// forward
 template <typename>
 class Option;
 
 namespace detail {
+// None variant
 struct None {
     enum class Secret {
         TOKEN,
     };
 
-    explicit constexpr None(Secret) noexcept {}
+    constexpr explicit None(Secret) noexcept {}
 };
 
+// Option traits
 template <typename T>
 struct is_option_impl : std::false_type {};
 
@@ -39,8 +42,94 @@ using is_option = is_option_impl<std::decay_t<T>>;
 
 template <typename T>
 inline constexpr bool is_option_v = is_option<T>::value;
-} // namespace detail
 
+// To support constexpr for Option<T>
+template <typename T>
+union OptionTrivialStorage {
+    T value;
+    char dummy;
+
+    constexpr OptionTrivialStorage() : dummy('\0') {}
+
+    template <typename... Args>
+    constexpr OptionTrivialStorage(Args&&... args)
+        : value(std::forward<Args>(args)...) {}
+
+    ~OptionTrivialStorage() = default;
+};
+
+template <typename T>
+union OptionNonTrivialStorage {
+    T value;
+    char dummy;
+
+    constexpr OptionNonTrivialStorage() : dummy('\0') {}
+
+    template <typename... Args>
+    constexpr OptionNonTrivialStorage(Args&&... args)
+        : value(std::forward<Args>(args)...) {}
+
+    ~OptionNonTrivialStorage() {}
+};
+
+template <typename T, bool = std::is_trivially_destructible_v<T>>
+class OptionBase;
+
+template <typename T>
+class OptionBase<T, true> {
+public:
+    constexpr OptionBase() : has_value_(false) {}
+
+    constexpr explicit OptionBase(T&& val)
+        : has_value_(true), sto_(std::move(val)) {}
+
+    constexpr explicit OptionBase(const T& val) : has_value_(true), sto_(val) {}
+
+    template <typename... Args>
+    constexpr OptionBase(std::in_place_t, Args&&... args)
+        : has_value_(true), sto_(std::forward<Args>(args)...) {}
+
+    ~OptionBase() = default;
+
+    constexpr void clear() {
+        has_value_ = false;
+    }
+
+protected:
+    bool has_value_;
+    OptionTrivialStorage<T> sto_;
+};
+
+template <typename T>
+class OptionBase<T, false> {
+public:
+    constexpr OptionBase() : has_value_(false) {}
+
+    constexpr explicit OptionBase(T&& val)
+        : has_value_(true), sto_(std::move(val)) {}
+
+    constexpr explicit OptionBase(const T& val) : has_value_(true), sto_(val) {}
+
+    template <typename... Args>
+    constexpr OptionBase(std::in_place_t, Args&&... args)
+        : has_value_(true), sto_(std::forward<Args>(args)...) {}
+
+    ~OptionBase() {
+        clear();
+    }
+
+    constexpr void clear() {
+        if (has_value_) {
+            has_value_ = false;
+            sto_.value.~T();
+        }
+    }
+
+protected:
+    bool has_value_;
+    OptionNonTrivialStorage<T> sto_;
+};
+} // namespace detail
 
 /// OptionEmptyException
 ///
@@ -50,7 +139,7 @@ public:
     OptionEmptyException()
         : std::runtime_error("Empty Option cannot be unwrapped") {}
 
-    OptionEmptyException(const char* s) : std::runtime_error(s) {}
+    explicit OptionEmptyException(const char* s) : std::runtime_error(s) {}
 };
 
 /// None variant of `Option`
@@ -118,11 +207,13 @@ Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
 /// ```
 ///
 template <typename T>
-class Option {
+class Option : public detail::OptionBase<T> {
     static_assert(!std::is_reference_v<T>,
                   "Option cannot be used with reference types");
     static_assert(!std::is_abstract_v<T>,
                   "Option cannot be used with abstract types");
+
+    using Base = detail::OptionBase<T>;
 
 public:
     using value_type = T;
@@ -134,9 +225,9 @@ public:
     /// const Option<int> none(None);
     /// assert(!none.has_value());
     /// ```
-    constexpr Option() noexcept {}
+    constexpr Option() noexcept : Base() {}
 
-    constexpr Option(detail::None) noexcept {}
+    constexpr /*implicit*/ Option(detail::None) noexcept : Base() {}
     /// @}
 
     /// @{
@@ -146,31 +237,31 @@ public:
     /// const Option<int> opt(42);
     /// assert(opt.has_value());
     /// ```
-    constexpr Option(T&& val) noexcept(
-        std::is_nothrow_move_constructible_v<T>) {
-        construct(std::move(val));
-    }
+    constexpr /*implicit*/ Option(T&& val) noexcept(
+        std::is_nothrow_move_constructible_v<T>)
+        : Base(std::move(val)) {}
 
-    constexpr Option(const T& val) noexcept(
-        std::is_nothrow_copy_constructible_v<T>) {
-        construct(val);
-    }
+    constexpr /*implicit*/ Option(const T& val) noexcept(
+        std::is_nothrow_copy_constructible_v<T>)
+        : Base(val) {}
     /// @}
 
     /// @{
     /// Constructs from others
     constexpr Option(Option&& rhs) noexcept(
-        std::is_nothrow_move_constructible_v<T>) {
+        std::is_nothrow_move_constructible_v<T>)
+        : Base() {
         if (rhs.has_value()) {
-            construct(std::move(rhs.value()));
+            construct(std::move(rhs.Base::sto_.value));
             rhs.clear();
         }
     }
 
     constexpr Option(const Option& rhs) noexcept(
-        std::is_nothrow_copy_constructible_v<T>) {
+        std::is_nothrow_copy_constructible_v<T>)
+        : Base() {
         if (rhs.has_value()) {
-            construct(rhs.value());
+            construct(rhs.Base::sto_.value);
         }
     }
     /// @}
@@ -184,7 +275,7 @@ public:
     /// res.assign(None);
     /// assert(!res.has_value());
     /// ```
-    constexpr void assign(detail::None) {
+    constexpr void assign(detail::None) noexcept {
         clear();
     }
 
@@ -194,7 +285,7 @@ public:
         std::is_nothrow_move_constructible_v<T>) {
         if (this != std::addressof(rhs)) {
             if (rhs.has_value()) {
-                assign(std::move(rhs.value()));
+                assign(std::move(rhs.Base::sto_.value));
                 rhs.clear();
             } else {
                 clear();
@@ -205,7 +296,7 @@ public:
     constexpr void assign(const Option& rhs) noexcept(
         std::is_nothrow_copy_constructible_v<T>) {
         if (rhs.has_value()) {
-            assign(rhs.value());
+            assign(rhs.Base::sto_.value);
         } else {
             clear();
         }
@@ -226,7 +317,7 @@ public:
     constexpr void
     assign(T&& val) noexcept(std::is_nothrow_move_constructible_v<T>) {
         if (has_value()) {
-            storage_.value = std::move(val);
+            Base::sto_.value = std::move(val);
         } else {
             construct(std::move(val));
         }
@@ -235,7 +326,7 @@ public:
     constexpr void
     assign(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
         if (has_value()) {
-            storage_.value = val;
+            Base::sto_.value = val;
         } else {
             construct(val);
         }
@@ -298,7 +389,7 @@ public:
     /// assert(!x.has_value());
     /// ```
     constexpr void clear() noexcept {
-        storage_.clear();
+        Base::clear();
     }
 
     /// Swaps with other option
@@ -333,22 +424,22 @@ public:
     /// throws `OptionEmptyException` if option is `None`
     constexpr T& value() & {
         value_required();
-        return storage_.value;
+        return Base::sto_.value;
     }
 
     constexpr const T& value() const& {
         value_required();
-        return storage_.value;
+        return Base::sto_.value;
     }
 
     constexpr T&& value() && {
         value_required();
-        return std::move(storage_.value);
+        return std::move(Base::sto_.value);
     }
 
     constexpr const T&& value() const&& {
         value_required();
-        return std::move(storage_.value);
+        return std::move(Base::sto_.value);
     }
     /// @}
 
@@ -358,12 +449,12 @@ public:
     /// throws OptionEmptyException with custom message if option is `None`
     constexpr const T& expect(const char* s) const& {
         value_required(s);
-        return storage_.value;
+        return Base::sto_.value;
     }
 
     constexpr T&& expect(const char* s) && {
         value_required(s);
-        return std::move(storage_.value);
+        return std::move(Base::sto_.value);
     }
     /// @}
 
@@ -676,11 +767,11 @@ public:
     ///
     /// If the value is a `None`, `nullptr` is returned
     constexpr T* get_pointer() & {
-        return has_value() ? std::addressof(storage_.value) : nullptr;
+        return has_value() ? std::addressof(Base::sto_.value) : nullptr;
     }
 
     constexpr const T* get_pointer() const& {
-        return has_value() ? std::addressof(storage_.value) : nullptr;
+        return has_value() ? std::addressof(Base::sto_.value) : nullptr;
     }
 
     T* get_pointer() && = delete;
@@ -688,7 +779,7 @@ public:
 
     /// Checks whether the option is `Some` or not
     constexpr bool has_value() const noexcept {
-        return storage_.has_value;
+        return Base::has_value_;
     }
 
     /// Checks whether the option is `Some` or not
@@ -729,62 +820,24 @@ public:
     /// @}
 private:
     constexpr void value_required() const {
-        if (!storage_.has_value) {
+        if (!Base::has_value_) {
             throw OptionEmptyException();
         }
     }
 
     constexpr void value_required(const char* s) const {
-        if (!storage_.has_value) {
+        if (!Base::has_value_) {
             throw OptionEmptyException(s);
         }
     }
 
     template <typename... Args>
-    constexpr void construct(Args&&... args) {
-        const void* ptr = std::addressof(storage_.value);
-        new (const_cast<void*>(ptr)) T(std::forward<Args>(args)...);
-        storage_.has_value = true;
+    constexpr void construct(Args&&... args) noexcept(
+        std::is_nothrow_constructible_v<T, Args...>) {
+        new (const_cast<T*>(std::addressof(Base::sto_.value)))
+            T(std::forward<Args>(args)...);
+        Base::has_value_ = true;
     }
-
-    struct TrivialStorage {
-        union {
-            T value;
-            char dummy;
-        };
-        bool has_value;
-
-        constexpr TrivialStorage() : dummy('\0'), has_value(false) {}
-
-        constexpr void clear() {
-            has_value = false;
-        }
-    };
-
-    struct NonTrivialStorage {
-        union {
-            T value;
-            char dummy;
-        };
-        bool has_value;
-
-        constexpr NonTrivialStorage() : dummy('\0'), has_value(false) {}
-
-        ~NonTrivialStorage() {
-            clear();
-        }
-
-        constexpr void clear() {
-            if (has_value) {
-                has_value = false;
-                value.~T();
-            }
-        }
-    };
-
-    using Storage = std::conditional_t<std::is_trivially_destructible_v<T>,
-                                       TrivialStorage, NonTrivialStorage>;
-    Storage storage_;
 };
 
 
@@ -817,7 +870,8 @@ inline constexpr bool operator!=(const Option<T>& lhs, const Option<T>& rhs) {
 template <typename T>
 inline constexpr bool operator<(const Option<T>& lhs, const Option<T>& rhs) {
     if (lhs.has_value() != rhs.has_value()) {
-        return lhs.has_value() < rhs.has_value();
+        return static_cast<int>(lhs.has_value()) <
+               static_cast<int>(rhs.has_value());
     }
     if (lhs.has_value()) {
         return lhs.value() < rhs.value();

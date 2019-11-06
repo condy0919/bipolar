@@ -1,52 +1,50 @@
 load(
-    '//bipolar:copts/configure_copts.bzl',
-    'BIPOLAR_DEFAULT_COPTS',
-    'BIPOLAR_DEFAULT_LINKOPTS',
-    'BIPOLAR_TEST_COPTS',
+    "//bipolar:copts/configure_copts.bzl",
+    "BIPOLAR_DEFAULT_COPTS",
+    "BIPOLAR_DEFAULT_LINKOPTS",
+    "BIPOLAR_TEST_COPTS",
 )
 
-package(default_visibility = ['//visibility:public'])
+package(default_visibility = ["//visibility:public"])
 
-licenses(['notice'])
+licenses(["notice"])
 
 cc_library(
-    name = 'io',
+    name = "io",
     srcs = [
-        'io_uring.cpp',
-        #'reactor.cpp',
+        "io_uring.cpp",
     ],
     hdrs = [
-        'io_uring.hpp',
-        #'reactor.hpp',
+        "io_uring.hpp",
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
     deps = [
-        '//bipolar/core:core',
-        '@liburing//:liburing',
+        "//bipolar/core",
+        "@liburing",
         #'@boost//:noncopyable',
     ],
 )
 
 cc_test(
-    name = 'io_uring_test',
+    name = "io_uring_test",
     srcs = [
-        'tests/io_uring_nop_test.cpp',
-        'tests/io_uring_sq_full_test.cpp',
-        'tests/io_uring_cq_full_test.cpp',
-        'tests/io_uring_submit_wait_test.cpp',
-        'tests/io_uring_eagain_test.cpp',
-        'tests/io_uring_fsync_test.cpp',
-        'tests/io_uring_link_test.cpp',
-        'tests/io_uring_poll_test.cpp',
-        'tests/io_uring_poll_cancel_test.cpp',
+        "tests/io_uring_cq_full_test.cpp",
+        "tests/io_uring_eagain_test.cpp",
+        "tests/io_uring_fsync_test.cpp",
+        "tests/io_uring_link_test.cpp",
+        "tests/io_uring_nop_test.cpp",
+        "tests/io_uring_poll_cancel_test.cpp",
+        "tests/io_uring_poll_test.cpp",
+        "tests/io_uring_sq_full_test.cpp",
+        "tests/io_uring_submit_wait_test.cpp",
     ],
     copts = BIPOLAR_TEST_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
-    tags = ['io_uring'],
+    tags = ["io_uring"],
     deps = [
-        ':io',
-        '@boost//:scope_exit',
-        '@gtest//:gtest_main',
+        ":io",
+        "@boost//:scope_exit",
+        "@gtest//:gtest_main",
     ],
 )

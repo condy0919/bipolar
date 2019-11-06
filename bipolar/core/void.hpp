@@ -19,7 +19,7 @@ struct Void {
     constexpr Void& operator=(const Void&) = default;
 
     template <typename T>
-    explicit constexpr Void(T&&) noexcept {}
+    constexpr explicit Void(T&&) noexcept {}
 };
 
 inline constexpr bool operator==(Void, Void) noexcept {
