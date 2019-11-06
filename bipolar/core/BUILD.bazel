@@ -23,6 +23,7 @@ cc_library(
         "overload.hpp",
         "result.hpp",
         "scope_guard.hpp",
+        "thread_safety.hpp",
         "traits.hpp",
         "try.hpp",
         "void.hpp",
