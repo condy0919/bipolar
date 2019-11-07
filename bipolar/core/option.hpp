@@ -14,6 +14,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "bipolar/core/internal/enable_special_members.hpp"
 
 namespace bipolar {
 // forward
@@ -207,7 +208,21 @@ Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
 /// ```
 ///
 template <typename T>
-class Option : public detail::OptionBase<T> {
+class Option : public detail::OptionBase<T>,
+               private internal::EnableCopyMove<
+                   // Copy constructor
+                   std::is_copy_constructible_v<T>,
+                   // Copy assignment
+                   std::conjunction_v<std::is_copy_constructible<T>,
+                                      std::is_copy_assignable<T>>,
+                   // Move constructor
+                   std::is_move_constructible_v<T>,
+                   // Move Assignment
+                   std::conjunction_v<std::is_move_constructible<T>,
+                                      std::is_move_assignable<T>>,
+                   // Unique tag type
+                   Option<T>> {
+
     static_assert(!std::is_reference_v<T>,
                   "Option cannot be used with reference types");
     static_assert(!std::is_abstract_v<T>,
