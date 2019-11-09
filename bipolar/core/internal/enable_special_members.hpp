@@ -14,11 +14,23 @@ namespace internal {
 template <bool Enable, typename Tag = void>
 struct EnableDefaultConstructor;
 
+/// DisableDefaultConstructor
+///
+/// A mixin helper to disable the default constructor
+template <typename Tag = void>
+using DisableDefaultConstructor = EnableDefaultConstructor<false, Tag>;
+
 /// EnableDestructor
 ///
 /// A mixin helper to conditionally enable/disable the destructor
 template <bool Enable, typename Tag = void>
 struct EnableDestructor;
+
+/// DisableDestructor
+///
+/// A mixin helper to disable the destructor
+template <typename Tag = void>
+using DisableDestructor = EnableDestructor<false, Tag>;
 
 /// EnableCopy
 ///
@@ -28,6 +40,14 @@ struct EnableDestructor;
 template <bool Copy, bool CopyAssignment, typename Tag = void>
 struct EnableCopy;
 
+/// DisableCopy
+///
+/// A mixin helper to disable
+/// - copy constructor
+/// - copy assignment
+template <typename Tag = void>
+using DisableCopy = EnableCopy<false, false, Tag>;
+
 /// EnableMove
 ///
 /// A mixin helper to conditionally enable/disable
@@ -35,6 +55,14 @@ struct EnableCopy;
 /// - move assignment
 template <bool Move, bool MoveAssignment, typename Tag = void>
 struct EnableMove;
+
+/// DisableMove
+///
+/// A mixin helper to disbale
+/// - move constructor
+/// - move assignment
+template <typename Tag = void>
+using DisableMove = EnableMove<false, false, Tag>;
 
 /// EnableCopyMove
 ///
@@ -51,6 +79,14 @@ template <bool Copy, bool CopyAssignment, bool Move, bool MoveAssignment,
 struct EnableCopyMove : private EnableCopy<Copy, CopyAssignment, Tag>,
                         private EnableMove<Move, MoveAssignment, Tag> {};
 
+/// A mixin helper to disbale
+/// - copy constructor
+/// - move constructor
+/// - copy assignment
+/// - move assignment
+template <typename Tag = void>
+using DisableCopyMove = EnableCopyMove<false, false, false, false, Tag>;
+
 /// EnableSpecialMembers
 ///
 /// A mixin helper to conditionally enable/disable the special members
@@ -63,6 +99,13 @@ struct EnableSpecialMembers : private EnableDefaultConstructor<Default, Tag>,
                               private EnableDestructor<Destructor, Tag>,
                               private EnableCopy<Copy, CopyAssignment, Tag>,
                               private EnableMove<Move, MoveAssignment, Tag> {};
+
+/// DisableSpecialMembers
+///
+/// A mixin helper to disbale all the special members
+template <typename Tag = void>
+using DisableSpecialMembers =
+    EnableSpecialMembers<false, false, false, false, false, false, Tag>;
 
 // clang-format off
 
