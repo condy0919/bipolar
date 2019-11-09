@@ -47,7 +47,7 @@ struct EnableMove;
 /// The `Tag` template parameter is to make mixin base unique and thus avoid
 /// ambiguities
 template <bool Copy, bool CopyAssignment, bool Move, bool MoveAssignment,
-          typename Tag>
+          typename Tag = void>
 struct EnableCopyMove : private EnableCopy<Copy, CopyAssignment, Tag>,
                         private EnableMove<Move, MoveAssignment, Tag> {};
 
