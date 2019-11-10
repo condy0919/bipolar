@@ -1,0 +1,32 @@
+name: BIPOLAR CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: ubuntu-gcc-9
+    runs-on: ubuntu-latest
+    container: gcc:9
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: System information
+        run: |
+          uname -a
+          free -m
+          gcc --version
+
+      - name: Installing bazel
+        run: |
+          curl -OL https://github.com/bazelbuild/bazel/releases/download/0.29.1/bazel-0.29.1-installer-linux-x86_64.sh
+          chmod +x bazel-0.29.1-installer-linux-x86_64.sh
+          ./bazel-0.29.1-installer-linux-x86_64.sh
+          rm ./bazel-0.29.1-installer-linux-x86_64.sh
+          bazel --version
+
+      - name: Building
+        run: bazel build //...
+
+      - name: Testing
+        run: bazel test //... --test_tag_filters='-io_uring,-benchmark'
