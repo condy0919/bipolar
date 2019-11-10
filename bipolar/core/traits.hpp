@@ -10,6 +10,7 @@
 #include <type_traits>
 
 namespace bipolar {
+// order relation
 namespace detail {
 template <typename, typename, template <typename, typename> typename,
           typename = void>
@@ -39,6 +40,14 @@ using greater_than_t = decltype(std::declval<T>() > std::declval<U>());
 
 template <typename T, typename U>
 using greater_than_or_equal_to_t = decltype(std::declval<T>() >= std::declval<U>());
+
+// has call operator
+template <typename, typename = void>
+struct has_call_operator : std::false_type {};
+
+template <typename T>
+struct has_call_operator<T, std::void_t<decltype(&T::operator())>>
+    : std::true_type {};
 } // namespace detail
 
 /// @{
@@ -118,6 +127,40 @@ struct is_strict_totally_ordered
 template <typename T, typename U = T>
 inline constexpr bool is_strict_totally_ordered_v =
     is_strict_totally_ordered<T, U>::value;
+/// @}
+
+/// @{
+/// This trait tests `T` is callable
+///
+/// ```
+/// assert(is_functor_v<int (*)(int)>);
+/// assert(!is_functor_v<int>);
+/// ```
+template <typename T>
+using is_functor = std::bool_constant<std::is_function_v<T> ||
+                                      detail::has_call_operator<T>::value>;
+
+template <typename T>
+inline constexpr bool is_functor_v = is_functor<T>::value;
+/// @}
+
+/// @{
+/// is_instantiation_of
+///
+/// Checks if `T` is an instantiation of `C` template
+///
+/// ```
+/// assert((is_instantiation_of_v<std::vector<int>, std::vector>));
+/// assert((!is_instantiation_of_v<std::string, std::vector>));
+/// ```
+template <typename, template <typename...> class>
+struct is_instantiation_of : std::false_type {};
+
+template <typename... Ts, template <typename...> class C>
+struct is_instantiation_of<C<Ts...>, C> : std::true_type {};
+
+template <typename T, template <typename...> class C>
+inline constexpr bool is_instantiation_of_v = is_instantiation_of<T, C>::value;
 /// @}
 
 } // namespace bipolar
