@@ -1,7 +1,6 @@
 #!/bin/bash
 
-me=$(python -c 'import os; print(os.path.realpath("'"$0"'"))')
-WORKSPACE=$(dirname $(dirname $(dirname "${me}")))
+WORKSPACE=$(dirname $(dirname $(dirname $(realpath "$0"))))
 
 # There must be ${WORKSPACE}/WORKSPACE.
 if [ ! -f "${WORKSPACE}/WORKSPACE" ]; then
