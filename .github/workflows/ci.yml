@@ -3,6 +3,27 @@ name: BIPOLAR CI
 on: [push, pull_request]
 
 jobs:
+  lint:
+    name: ubuntu-clang-9
+    runs-on: ubuntu-latest
+    container: archlinuxrolling/llvm:latest
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: System information
+        run: |
+          uname -a
+          clang --version
+
+      - name: Installing bazel
+        run: |
+          pacman -Sy bazel git --noconfirm
+          bazel --version
+
+      - name: Building
+        run: CC=clang bazel build //...
+
   build:
     name: ubuntu-gcc-9
     runs-on: ubuntu-latest
@@ -17,7 +38,6 @@ jobs:
       - name: System information
         run: |
           uname -a
-          free -m
           gcc --version
 
       - name: Installing bazel
