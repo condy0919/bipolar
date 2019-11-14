@@ -90,7 +90,6 @@ class Function<R(Args...)> {
     };
 
 public:
-    /// @{
     /// Creates an empty `Function` call wrapper
     ///
     /// ```
@@ -101,9 +100,7 @@ public:
     /// assert(bool(empty2) == false);
     /// ```
     constexpr Function() noexcept : vtbl_(&empty_vtable_), avail_(false), stg_() {}
-
     constexpr Function(std::nullptr_t) noexcept : Function() {}
-    /// @}
 
     /// `Function` is move-only
     Function(const Function&) = delete;
@@ -279,7 +276,6 @@ inline void swap(Function<T>& lhs, Function<T>& rhs) noexcept {
     lhs.swap(rhs);
 }
 
-/// @{
 /// Compares a polymorphic function object wrapper against `nullptr`
 template <typename T>
 inline bool operator==(const Function<T>& lhs, std::nullptr_t) noexcept {
@@ -300,7 +296,6 @@ template <typename T>
 inline bool operator!=(std::nullptr_t, const Function<T>& lhs) noexcept {
     return static_cast<bool>(lhs);
 }
-/// @}
 
 } // namespace bipolar
 

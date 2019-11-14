@@ -50,7 +50,6 @@ struct has_call_operator<T, std::void_t<decltype(&T::operator())>>
     : std::true_type {};
 } // namespace detail
 
-/// @{
 /// This trait tests equal to and is used by both `operator==` and `operator!=`
 template <typename T, typename U = T>
 struct is_equality_comparable
@@ -61,10 +60,8 @@ struct is_equality_comparable
 
 template <typename T, typename U = T>
 inline constexpr bool is_equality_comparable_v = is_equality_comparable<T, U>::value;
-/// @}
 
 
-/// @{
 /// This trait tests less than and is used by the operator<=
 template <typename T, typename U = T>
 struct is_less_than_comparable
@@ -73,9 +70,7 @@ struct is_less_than_comparable
 template <typename T, typename U = T>
 inline constexpr bool is_less_than_comparable_v =
     is_less_than_comparable<T, U>::value;
-/// @}
 
-/// @{
 /// This trait tests less than or equal to and is used by the `operator<=`
 template <typename T, typename U = T>
 struct is_less_than_or_equal_to_comparable
@@ -84,9 +79,7 @@ struct is_less_than_or_equal_to_comparable
 template <typename T, typename U = T>
 inline constexpr bool is_less_than_or_equal_to_comparable_v =
     is_less_than_or_equal_to_comparable<T, U>::value;
-/// @}
 
-/// @{
 /// This trait tests greater than and is used by the `operator>`
 template <typename T, typename U = T>
 struct is_greater_than_comparable
@@ -95,10 +88,7 @@ struct is_greater_than_comparable
 template <typename T, typename U = T>
 inline constexpr bool is_greater_than_comparable_v =
     is_greater_than_comparable<T, U>::value;
-/// @}
 
-
-/// @{
 /// This trait tests greater than or equal to and is used by the `operator>=`
 template <typename T, typename U = T>
 struct is_greater_than_or_equal_to_comparable
@@ -107,10 +97,7 @@ struct is_greater_than_or_equal_to_comparable
 template <typename T, typename U = T>
 inline constexpr bool is_greater_than_or_equal_to_comparable_v =
     is_greater_than_or_equal_to_comparable<T, U>::value;
-/// @}
 
-
-/// @{
 /// This trait tests `T` is strict totally ordered with `U`
 template <typename T, typename U = T>
 struct is_strict_totally_ordered
@@ -127,9 +114,7 @@ struct is_strict_totally_ordered
 template <typename T, typename U = T>
 inline constexpr bool is_strict_totally_ordered_v =
     is_strict_totally_ordered<T, U>::value;
-/// @}
 
-/// @{
 /// This trait tests `T` is callable
 ///
 /// ```
@@ -142,9 +127,7 @@ using is_functor = std::bool_constant<std::is_function_v<T> ||
 
 template <typename T>
 inline constexpr bool is_functor_v = is_functor<T>::value;
-/// @}
 
-/// @{
 /// is_instantiation_of
 ///
 /// Checks if `T` is an instantiation of `C` template
@@ -161,7 +144,6 @@ struct is_instantiation_of<C<Ts...>, C> : std::true_type {};
 
 template <typename T, template <typename...> class C>
 inline constexpr bool is_instantiation_of_v = is_instantiation_of<T, C>::value;
-/// @}
 
 } // namespace bipolar
 

@@ -19,7 +19,6 @@ namespace detail {
 inline constexpr bool is_big_endian = (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__);
 }
 
-/// @{
 /// Converts from host byteorder to network byteorder
 constexpr inline std::uint8_t hton(std::uint8_t v) noexcept {
     return v;
@@ -48,9 +47,7 @@ constexpr inline std::uint64_t hton(std::uint64_t v) noexcept {
         return __builtin_bswap64(v);
     }
 }
-/// @}
 
-/// @{
 /// Converts from network byteorder to host byteorder
 constexpr inline std::uint8_t ntoh(std::uint8_t v) noexcept {
     return v;
@@ -79,7 +76,6 @@ constexpr inline std::uint64_t ntoh(std::uint64_t v) noexcept {
         return __builtin_bswap64(v);
     }
 }
-/// @}
 
 } // namespace bipolar
 
