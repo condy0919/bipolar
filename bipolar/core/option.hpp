@@ -290,7 +290,7 @@ public:
         clear();
     }
 
-    /// Assigns with other options
+    /// Assigns other options
     constexpr void
     assign(Option&& rhs) noexcept(std::is_nothrow_move_constructible_v<T>) {
         if (this != std::addressof(rhs)) {
@@ -312,7 +312,7 @@ public:
         }
     }
 
-    /// Assigns with value directly
+    /// Assigns value directly
     ///
     /// ```
     /// Option<int> opt(None);
@@ -346,7 +346,7 @@ public:
         return *this;
     }
 
-    /// Assigns with other options
+    /// Assigns other options
     constexpr Option&
     operator=(Option&& rhs) noexcept(std::is_nothrow_move_constructible_v<T>) {
         assign(std::move(rhs));
