@@ -1,15 +1,15 @@
 //! Option
 //!
-//! see `Option` type for details.
+//! See `Option` type for details.
 //!
 
 #ifndef BIPOLAR_CORE_OPTION_HPP_
 #define BIPOLAR_CORE_OPTION_HPP_
 
-#include <new>
 #include <cassert>
 #include <cstdint>
 #include <functional>
+#include <new>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -134,7 +134,7 @@ protected:
 
 /// OptionEmptyException
 ///
-/// Throws when trying to unwrap an empty Option
+/// Throws when trying to unwrap an empty `Option`
 class OptionEmptyException : public std::runtime_error {
 public:
     OptionEmptyException()
@@ -146,10 +146,9 @@ public:
 /// None variant of `Option`
 inline constexpr detail::None None{detail::None::Secret::TOKEN};
 
-/// @{
 /// `Some` variant of `Option`
 ///
-/// see `Option::Option` for details
+/// See `Option::Option` for details
 template <typename T>
 inline constexpr Option<T>
 Some(T&& val) noexcept(std::is_nothrow_move_constructible_v<T>) {
@@ -161,13 +160,12 @@ inline constexpr Option<T>
 Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
     return {val};
 }
-/// @}
 
 /// Option
 ///
 /// # Brief
 ///
-/// Type Option represents an optional value. Either one is `Some` and
+/// `Option` type represents an optional value. Either one is `Some` and
 /// contains a value, or `None`, and does not.
 ///
 /// It has many usages:
@@ -194,7 +192,7 @@ Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
 /// assert(!result.has_value());
 /// ```
 ///
-/// Indicate an error instead of using out parameter and bool return value
+/// Indicates an error instead of using out parameter and bool return value
 ///
 /// ```
 /// Option<std::size_t> find(const std::vector<int>& vec, int target) {
@@ -209,18 +207,23 @@ Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
 ///
 template <typename T>
 class Option : public detail::OptionBase<T>,
-               private internal::EnableCopyMove<
-                   // Copy constructor
+               public internal::EnableCopyConstructor<
                    std::is_copy_constructible_v<T>,
-                   // Copy assignment
+                   std::is_nothrow_copy_constructible_v<T>, Option<T>>,
+               public internal::EnableCopyAssignment<
                    std::conjunction_v<std::is_copy_constructible<T>,
                                       std::is_copy_assignable<T>>,
-                   // Move constructor
+                   std::conjunction_v<std::is_nothrow_copy_constructible<T>,
+                                      std::is_nothrow_copy_assignable<T>>,
+                   Option<T>>,
+               public internal::EnableMoveConstructor<
                    std::is_move_constructible_v<T>,
-                   // Move Assignment
+                   std::is_nothrow_move_constructible_v<T>, Option<T>>,
+               public internal::EnableMoveAssignment<
                    std::conjunction_v<std::is_move_constructible<T>,
                                       std::is_move_assignable<T>>,
-                   // Unique tag type
+                   std::conjunction_v<std::is_nothrow_move_constructible<T>,
+                                      std::is_nothrow_move_assignable<T>>,
                    Option<T>> {
 
     static_assert(!std::is_reference_v<T>,
@@ -233,7 +236,6 @@ class Option : public detail::OptionBase<T>,
 public:
     using value_type = T;
 
-    /// @{
     /// No value
     ///
     /// ```
@@ -241,11 +243,8 @@ public:
     /// assert(!none.has_value());
     /// ```
     constexpr Option() noexcept : Base() {}
-
     constexpr /*implicit*/ Option(detail::None) noexcept : Base() {}
-    /// @}
 
-    /// @{
     /// Constructs from value directly
     ///
     /// ```
@@ -259,10 +258,8 @@ public:
     constexpr /*implicit*/ Option(const T& val) noexcept(
         std::is_nothrow_copy_constructible_v<T>)
         : Base(val) {}
-    /// @}
 
-    /// @{
-    /// Constructs from others
+    /// Constructs from other options
     constexpr Option(Option&& rhs) noexcept(
         std::is_nothrow_move_constructible_v<T>)
         : Base() {
@@ -279,9 +276,8 @@ public:
             construct(rhs.Base::sto_.value);
         }
     }
-    /// @}
 
-    /// Assigns with None will reset the option
+    /// Resets to `None`
     ///
     /// ```
     /// Option<int> res(Some(42));
@@ -294,10 +290,9 @@ public:
         clear();
     }
 
-    /// @{
-    /// Assigns with another Option value
-    constexpr void assign(Option&& rhs) noexcept(
-        std::is_nothrow_move_constructible_v<T>) {
+    /// Assigns with other options
+    constexpr void
+    assign(Option&& rhs) noexcept(std::is_nothrow_move_constructible_v<T>) {
         if (this != std::addressof(rhs)) {
             if (rhs.has_value()) {
                 assign(std::move(rhs.Base::sto_.value));
@@ -316,9 +311,7 @@ public:
             clear();
         }
     }
-    /// @}
 
-    /// @{
     /// Assigns with value directly
     ///
     /// ```
@@ -346,38 +339,27 @@ public:
             construct(val);
         }
     }
-    /// @}
 
-    /// Same with `assign(detail::None)`
-    ///
-    /// see `assign(detail::None)`
+    /// Resets to `None`
     constexpr Option& operator=(detail::None) noexcept {
         clear();
         return *this;
     }
 
-    /// @{
-    /// Same with `assign(Option&&)`
-    ///
-    /// see `assign(Option&&)`
-    constexpr Option& operator=(Option&& rhs) noexcept(
-        std::is_nothrow_move_constructible_v<T>) {
+    /// Assigns with other options
+    constexpr Option&
+    operator=(Option&& rhs) noexcept(std::is_nothrow_move_constructible_v<T>) {
         assign(std::move(rhs));
         return *this;
     }
 
-    /// Same with `assign(const Option&)`
-    ///
-    /// see `assign(const Option&)`
     constexpr Option& operator=(const Option& rhs) noexcept(
         std::is_nothrow_copy_constructible_v<T>) {
         assign(rhs);
         return *this;
     }
-    /// @}
 
-
-    /// Inplacement constructs from args
+    /// Placement constructs from arguments
     ///
     /// ```
     /// Option<std::string> sopt(None);
@@ -387,8 +369,8 @@ public:
     /// assert(sopt.value() == "hello");
     /// ```
     template <typename... Args>
-    constexpr T& emplace(Args&&... args) noexcept(
-        std::is_nothrow_move_constructible_v<T>) {
+    constexpr T&
+    emplace(Args&&... args) noexcept(std::is_nothrow_move_constructible_v<T>) {
         clear();
         construct(std::forward<Args>(args)...);
         return value();
@@ -407,7 +389,7 @@ public:
         Base::clear();
     }
 
-    /// Swaps with other option
+    /// Swaps with other options
     ///
     /// ```
     /// Option<int> x(Some(1));
@@ -433,7 +415,6 @@ public:
         }
     }
 
-    /// @{
     /// Unwraps an option, yielding the content of a `Some`
     ///
     /// throws `OptionEmptyException` if option is `None`
@@ -456,12 +437,10 @@ public:
         value_required();
         return std::move(Base::sto_.value);
     }
-    /// @}
 
-    /// @{
     /// Unwraps an option, yielding the content of a `Some`
     ///
-    /// throws OptionEmptyException with custom message if option is `None`
+    /// throws `OptionEmptyException` with custom message if option is `None`
     constexpr const T& expect(const char* s) const& {
         value_required(s);
         return Base::sto_.value;
@@ -471,9 +450,7 @@ public:
         value_required(s);
         return std::move(Base::sto_.value);
     }
-    /// @}
 
-    /// @{
     /// Returns the contained value or a default
     ///
     /// Arguments passed to `value_or` are eagerly evaluated; if you are
@@ -485,8 +462,7 @@ public:
     /// `U` can be convertible to `T`
     template <typename U>
     constexpr T value_or(U&& deft) const& {
-        return has_value() ? value()
-                           : static_cast<T>(std::forward<U>(deft));
+        return has_value() ? value() : static_cast<T>(std::forward<U>(deft));
     }
 
     template <typename U>
@@ -496,7 +472,6 @@ public:
     }
     /// @}
 
-    /// @{
     /// Returns the contained value or the result of function
     ///
     /// # Constraints
@@ -528,9 +503,7 @@ public:
     constexpr T value_or_else(F&& f) && {
         return has_value() ? std::move(value()) : std::forward<F>(f)();
     }
-    /// @}
 
-    /// @{
     /// Maps an `Option<T>` to `Option<U>` by applying a function to
     /// the contained value
     ///
@@ -552,8 +525,7 @@ public:
     /// ```
     template <typename F, typename U = std::invoke_result_t<F, T>>
     constexpr Option<U> map(F&& f) const& {
-        return has_value() ? Some(std::forward<F>(f)(value()))
-                           : None;
+        return has_value() ? Some(std::forward<F>(f)(value())) : None;
     }
 
     template <typename F, typename U = std::invoke_result_t<F, T>>
@@ -561,9 +533,7 @@ public:
         return has_value() ? Some(std::forward<F>(f)(std::move(value())))
                            : None;
     }
-    /// @}
 
-    /// @{
     /// Applies the function to the contained value or returns
     /// the provided default value
     ///
@@ -588,8 +558,7 @@ public:
     /// ```
     template <typename F, typename U = std::invoke_result_t<F, T>>
     constexpr U map_or(U deft, F&& f) const& {
-        return has_value() ? std::forward<F>(f)(value())
-                           : std::move(deft);
+        return has_value() ? std::forward<F>(f)(value()) : std::move(deft);
     }
 
     template <typename F, typename U = std::invoke_result_t<F(T)>>
@@ -597,9 +566,7 @@ public:
         return has_value() ? std::forward<F>(f)(std::move(value()))
                            : std::move(deft);
     }
-    /// @}
 
-    /// @{
     /// Applies the function to the contained value or return the result
     /// of functor `d`
     ///
@@ -614,21 +581,22 @@ public:
     ///
     /// ```
     /// const auto opt = Some(0);
-    /// const auto res = opt.map_or_else([]() -> Option<int> { return Some(-1); },
-    ///                                  [](int x) -> int { return x + 1; });
+    /// const auto res =
+    ///     opt.map_or_else([]() -> Option<int> { return Some(-1); },
+    ///                     [](int x) -> int { return x + 1; });
     /// assert(res.has_value() && res.value() == 1);
     ///
     /// const Option<int> none(None);
-    /// const auto res2 = none.map_or_else([]() -> Option<int> { return Some(-1); },
-    ///                                    [](int x) -> int { return x + 1; });
+    /// const auto res2 =
+    ///     none.map_or_else([]() -> Option<int> { return Some(-1); },
+    ///                      [](int x) -> int { return x + 1; });
     /// assert(res2.has_value() && res2.value() == -1);
     /// ```
     template <
         typename F, typename D, typename U = std::invoke_result_t<F, T>,
         std::enable_if_t<std::is_same_v<U, std::invoke_result_t<D>>, int> = 0>
     constexpr U map_or_else(D&& d, F&& f) const& {
-        return has_value() ? std::forward<F>(f)(value())
-                           : std::forward<D>(d)();
+        return has_value() ? std::forward<F>(f)(value()) : std::forward<D>(d)();
     }
 
     template <
@@ -638,9 +606,7 @@ public:
         return has_value() ? std::forward<F>(f)(std::move(value()))
                            : std::forward<D>(d)();
     }
-    /// @}
 
-    /// @{
     /// Returns `None` if the option is `None`, otherwise calls `f` with
     /// the wrapped value and returns the result
     ///
@@ -670,8 +636,7 @@ public:
               typename R = std::invoke_result_t<F, Arg>,
               std::enable_if_t<detail::is_option_v<R>, int> = 0>
     constexpr R and_then(F&& f) const& {
-        return has_value() ? std::forward<F>(f)(value())
-                           : None;
+        return has_value() ? std::forward<F>(f)(value()) : None;
     }
 
     /// Returns `None` if the option is `None`, otherwise
@@ -683,12 +648,9 @@ public:
     template <typename F, typename R = std::invoke_result_t<F, T>,
               std::enable_if_t<detail::is_option_v<R>, int> = 0>
     constexpr R and_then(F&& f) && {
-        return has_value() ? std::forward<F>(f)(std::move(value()))
-                           : None;
+        return has_value() ? std::forward<F>(f)(std::move(value())) : None;
     }
-    /// @}
 
-    /// @{
     /// Returns `None` if the option is `None`, otherwise calls `f`
     /// with the wrapped value and returns:
     /// - `Some(t)` if `f` returns `true` where `t` is the wrapped value, and
@@ -712,8 +674,7 @@ public:
               std::enable_if_t<
                   std::is_same_v<std::invoke_result_t<F, Arg>, bool>, int> = 0>
     constexpr Option<T> filter(F&& f) const& {
-        return has_value() && std::forward<F>(f)(value()) ? *this
-                                                          : None;
+        return has_value() && std::forward<F>(f)(value()) ? *this : None;
     }
 
     template <typename F,
@@ -724,9 +685,7 @@ public:
         return has_value() && std::forward<F>(f)(value()) ? std::move(*this)
                                                           : None;
     }
-    /// @}
 
-    /// @{
     /// Returns the option if it contains a value, otherwise
     /// calls `f` and returns the result
     ///
@@ -761,7 +720,6 @@ public:
     constexpr Option<T> or_else(F&& f) && {
         return has_value() ? std::move(*this) : std::forward<F>(f)();
     }
-    /// @}
 
     /// Takes the value out of the option, leaving a `None` in place
     ///
@@ -777,7 +735,6 @@ public:
         return opt;
     }
 
-    /// @{
     /// Returns the pointer to internal storage
     ///
     /// If the value is a `None`, `nullptr` is returned
@@ -790,7 +747,6 @@ public:
     }
 
     T* get_pointer() && = delete;
-    /// @}
 
     /// Checks whether the option is `Some` or not
     constexpr bool has_value() const noexcept {
@@ -802,7 +758,6 @@ public:
         return has_value();
     }
 
-    /// @{
     /// Dereference makes it more like a pointer
     /// Throws `OptionEmptyException` if the option is `None`
     constexpr T& operator*() & {
@@ -820,9 +775,7 @@ public:
     constexpr const T&& operator*() const&& {
         return std::move(value());
     }
-    /// @}
 
-    /// @{
     /// Arrow operator makes it more like a pointer
     /// Throws `OptionEmptyException` if the option is `None`
     constexpr const T* operator->() const {
@@ -832,7 +785,7 @@ public:
     constexpr T* operator->() {
         return &value();
     }
-    /// @}
+
 private:
     constexpr void value_required() const {
         if (!Base::has_value_) {
@@ -855,17 +808,14 @@ private:
     }
 };
 
-
-/// Swaps between Option object
-///
-/// see `Option<T>::swap`
+/// Swaps with other options
 template <typename T>
-void swap(Option<T>& lhs, Option<T>& rhs) noexcept(noexcept(lhs.swap(rhs))) {
+inline constexpr void swap(Option<T>& lhs,
+                           Option<T>& rhs) noexcept(noexcept(lhs.swap(rhs))) {
     lhs.swap(rhs);
 }
 
-/// @{
-/// Comparison with others
+/// Comparison operators for `Option<T>`s
 template <typename T>
 inline constexpr bool operator==(const Option<T>& lhs, const Option<T>& rhs) {
     if (lhs.has_value() != rhs.has_value()) {
@@ -908,10 +858,9 @@ template <typename T>
 inline constexpr bool operator>=(const Option<T>& lhs, const Option<T>& rhs) {
     return !(lhs < rhs);
 }
-/// @}
 
-/// @{
-/// Comparison with None type, where None is the rhs
+/// Comparison operators for `Option<T>` and `None`, where
+/// `None` is in the right hand
 template <typename T>
 inline constexpr bool operator==(const Option<T>& lhs, detail::None) noexcept {
     return !lhs.has_value();
@@ -944,7 +893,8 @@ inline constexpr bool operator>=(const Option<T>& lhs, detail::None) noexcept {
     return true;
 }
 
-/// Comparison with None type, where None is the lhs
+/// Comparison operators for `Option<T>` and `None`, where
+/// `None` is in the left hand
 template <typename T>
 inline constexpr bool operator==(detail::None, const Option<T>& rhs) noexcept {
     return !rhs.has_value();
@@ -976,7 +926,6 @@ template <typename T>
 inline constexpr bool operator>=(detail::None, const Option<T>& rhs) noexcept {
     return !rhs.has_value();
 }
-/// @}
 
 } // namespace bipolar
 
