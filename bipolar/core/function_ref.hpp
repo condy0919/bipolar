@@ -66,7 +66,7 @@ public:
 
     constexpr FunctionRef& operator=(const FunctionRef&) noexcept = default;
 
-    constexpr R operator()(Args... args) const {
+    R operator()(Args... args) const {
         return call_(obj_, std::forward<Args>(args)...);
     }
 
