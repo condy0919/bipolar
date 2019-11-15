@@ -1,0 +1,71 @@
+name: BIPOLAR CI
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    name: ubuntu-clang-9
+    runs-on: ubuntu-latest
+    container: archlinuxrolling/llvm:latest
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: System information
+        run: |
+          uname -a
+          clang --version
+
+      - name: Installing bazel
+        run: |
+          pacman -Sy bazel git --noconfirm
+          bazel --version
+
+      - name: Building
+        run: CC=clang bazel build //...
+
+  build:
+    name: ubuntu-gcc-9
+    runs-on: ubuntu-latest
+
+    container:
+      image: gcc:9
+      options: --security-opt seccomp=unconfined
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: System information
+        run: |
+          uname -a
+          gcc --version
+
+      - name: Installing bazel
+        run: |
+          curl -OL https://github.com/bazelbuild/bazel/releases/download/0.29.1/bazel-0.29.1-installer-linux-x86_64.sh
+          chmod +x bazel-0.29.1-installer-linux-x86_64.sh
+          ./bazel-0.29.1-installer-linux-x86_64.sh
+          rm ./bazel-0.29.1-installer-linux-x86_64.sh
+          bazel --version
+
+      - name: Installing kcov
+        run: |
+          apt update
+          apt install -y binutils-dev libcurl4-openssl-dev zlib1g-dev libdw-dev libiberty-dev cmake
+          git clone https://github.com/SimonKagstrom/kcov
+          (cd kcov; cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release; cd build; make install)
+          rm kcov -rf
+
+      - name: Building
+        run: bazel build //...
+
+      - name: Testing
+        run: bazel test //... --test_tag_filters='-io_uring,-benchmark'
+
+      - name: Testing with code coverage reports
+        run: bazel test --config=kcov //... --test_tag_filters='-io_uring,-benchmark'
+
+      - uses: codecov/codecov-action@v1.0.3
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          flags: unittests

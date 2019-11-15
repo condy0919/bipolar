@@ -21,6 +21,11 @@ struct NoDefault {
     char a, b, c;
 };
 
+TEST(Result, Internal) {
+    const auto empty = make_empty_result<int, int>();
+    EXPECT_TRUE(has_nothing(empty));
+}
+
 TEST(Result, TryMacro) {
     auto succ = []() -> Result<int, int> {
         Result<int, int> x = Ok(1);

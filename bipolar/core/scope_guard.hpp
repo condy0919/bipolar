@@ -50,7 +50,7 @@ private:
 /// # Brief
 ///
 /// `ScopeGuardExit` is a deferred functor wrapper.
-/// It's neigher copyable, movable or assignable.
+/// It's neither copyable, movable or assignable.
 /// It will invoke the functor when it goes out of scope unless dismissed.
 ///
 /// # Examples
@@ -65,10 +65,10 @@ private:
 ///         k2v.erase(it);
 ///     });
 ///
-///     // if below insert method throws a std::bad_alloc,
+///     // if the following insert method throws a std::bad_alloc,
 ///     // the `ScopeGuardExit` object will make k2v recover to the previous
 ///     // consistant state
-///     v2k.insert(std::make_pair(v, k));
+///     v2k.insert(std::make_pair(k, v));
 ///
 ///     // no exception thrown, so we cancel the guard
 ///     guard.dismiss();

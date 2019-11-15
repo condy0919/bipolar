@@ -249,7 +249,6 @@ public:
     /// ```
     constexpr Try() noexcept : detail::TryBase() {}
 
-    /// @{
     /// Constructs a `Try` with a value by copy/move
     ///
     /// ```
@@ -273,7 +272,6 @@ public:
         : detail::TryBase(detail::TryBase::State::VALUE),
           detail::UninitializedType<T>(std::in_place,
                                        std::forward<Args>(args)...) {}
-    /// @}
 
     /// Constructs a `Try` with an `std::exception_ptr`
     ///
@@ -284,7 +282,6 @@ public:
     constexpr explicit Try(std::exception_ptr&& ex) noexcept
         : detail::TryBase(std::move(ex)) {}
 
-    /// @{
     /// Move constructor and assigner
     ///
     /// If move ctor throws exception, `Try` will be in NOTHING state
@@ -306,7 +303,6 @@ public:
         new (this) Try(std::move(rhs));
         return *this;
     }
-    /// @}
 
     ~Try() noexcept(std::is_nothrow_destructible_v<T>) {
         if (has_value()) {
@@ -331,7 +327,6 @@ public:
         return detail::TryBase::get_exception();
     }
 
-    /// @{
     /// Unwraps a `Try`, yielding the value.
     /// It's similar with `value()` function except the throw conditions.
     ///
@@ -367,9 +362,7 @@ public:
         get_required();
         return std::move(detail::UninitializedType<T>::get());
     }
-    /// @}
 
-    /// @{
     /// Unwraps a `Try`, yielding the value.
     ///
     /// Throws `TryInvalidException` if `Try` doesn't have a value
@@ -392,9 +385,7 @@ public:
         value_required();
         return std::move(detail::UninitializedType<T>::get());
     }
-    /// @}
    
-    /// @{
     /// Unwraps a `Try`, yielding the exception
     /// 
     /// Throws `TryInvalidException` if `Try` doesn't have an exception
@@ -417,9 +408,7 @@ public:
         exception_required();
         return std::move(detail::TryBase::get_exception());
     }
-    /// @}
 
-    /// @{
     /// Makes it behave like a pointer
     ///
     /// Throws `TryInvalidException` if `Try` doesn't have a value
@@ -430,9 +419,7 @@ public:
     constexpr const T* operator->() const {
         return std::addressof(value());
     }
-    /// @}
 
-    /// @{
     /// Makes it behave like a pointer
     ///
     /// Throws `TryInvalidException` if `Try` doesn't have a value
@@ -451,7 +438,6 @@ public:
     constexpr const T&& operator*() const&& {
         return std::move(value());
     }
-    /// @}
 
     /// Checks whether it holds a value
     constexpr bool has_value() const noexcept {

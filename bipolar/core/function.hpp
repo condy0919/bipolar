@@ -90,7 +90,6 @@ class Function<R(Args...)> {
     };
 
 public:
-    /// @{
     /// Creates an empty `Function` call wrapper
     ///
     /// ```
@@ -101,9 +100,7 @@ public:
     /// assert(bool(empty2) == false);
     /// ```
     constexpr Function() noexcept : vtbl_(&empty_vtable_), avail_(false), stg_() {}
-
     constexpr Function(std::nullptr_t) noexcept : Function() {}
-    /// @}
 
     /// `Function` is move-only
     Function(const Function&) = delete;
@@ -196,19 +193,22 @@ private:
     // insitu case
     template <typename F>
     explicit Function(F&& f, std::true_type) noexcept {
+        using NoRefF = std::remove_reference_t<F>;
+
         struct Op {
-            static F* access(const Function* pf) {
-                return static_cast<F*>(const_cast<void*>(
+            static NoRefF* access(const Function* pf) {
+                return static_cast<NoRefF*>(const_cast<void*>(
                     static_cast<const void*>(&pf->stg_.insitu_)));
             }
 
-            static F* access(Function* pf) {
-                return static_cast<F*>(static_cast<void*>(&pf->stg_.insitu_));
+            static std::remove_reference_t<F>* access(Function* pf) {
+                return static_cast<NoRefF*>(
+                    static_cast<void*>(&pf->stg_.insitu_));
             }
 
             static void init(Function* pf, F&& f) {
                 new (const_cast<void*>(static_cast<const void*>(access(pf))))
-                    F(std::forward<F>(f));
+                    NoRefF(std::forward<F>(f));
             }
 
             static void destroy(const Function* pf) {
@@ -236,13 +236,15 @@ private:
     // heap case
     template <typename F>
     explicit Function(F&& f, std::false_type) {
+        using NoRefF = std::remove_reference_t<F>;
+
         struct Op {
-            static F* access(const Function* pf) {
-                return static_cast<F*>(const_cast<void*>(pf->stg_.ptr_));
+            static NoRefF* access(const Function* pf) {
+                return static_cast<NoRefF*>(const_cast<void*>(pf->stg_.ptr_));
             }
 
             static void init(Function* pf, F&& f) {
-                pf->stg_.ptr_ = new F(std::forward<F>(f));
+                pf->stg_.ptr_ = new NoRefF(std::forward<F>(f));
             }
 
             static void destroy(const Function* pf) {
@@ -279,7 +281,6 @@ inline void swap(Function<T>& lhs, Function<T>& rhs) noexcept {
     lhs.swap(rhs);
 }
 
-/// @{
 /// Compares a polymorphic function object wrapper against `nullptr`
 template <typename T>
 inline bool operator==(const Function<T>& lhs, std::nullptr_t) noexcept {
@@ -300,7 +301,6 @@ template <typename T>
 inline bool operator!=(std::nullptr_t, const Function<T>& lhs) noexcept {
     return static_cast<bool>(lhs);
 }
-/// @}
 
 } // namespace bipolar
 

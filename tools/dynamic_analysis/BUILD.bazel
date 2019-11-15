@@ -4,3 +4,27 @@ sh_binary(
     name = "kcov",
     srcs = ["kcov.sh"],
 )
+
+sh_binary(
+    name = "asan",
+    srcs = ["asan.sh"],
+    data = ["asan.supp"],
+)
+
+sh_binary(
+    name = "lsan",
+    srcs = ["lsan.sh"],
+    data = ["lsan.supp"],
+)
+
+sh_binary(
+    name = "tsan",
+    srcs = ["tsan.sh"],
+    data = ["tsan.supp"],
+)
+
+sh_binary(
+    name = "ubsan",
+    srcs = ["ubsan.sh"],
+    data = ["ubsan.supp"],
+)
