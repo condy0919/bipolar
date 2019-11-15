@@ -295,8 +295,8 @@ struct SmallTrivialStorage : Storage<SmallTrivialStorage<T, E>> {
                   "SmallTrivialStorage isn't smaller than 2 pointers");
 
     Which which_;
-    T value_;
-    E error_;
+    [[no_unique_address]] T value_;
+    [[no_unique_address]] E error_;
 
     constexpr explicit SmallTrivialStorage(EmptyTag) noexcept(
         std::is_nothrow_default_constructible_v<T>&&
@@ -328,8 +328,8 @@ struct TrivialStorage : Storage<TrivialStorage<T, E>> {
 
     Which which_;
     union {
-        T value_;
-        E error_;
+        [[no_unique_address]] T value_;
+        [[no_unique_address]] E error_;
         char dummy_;
     };
 
@@ -356,8 +356,8 @@ template <typename T, typename E>
 struct NonTrivialStorageInner {
     Which which_ = Which::Empty;
     union {
-        T value_;
-        E error_;
+        [[no_unique_address]] T value_;
+        [[no_unique_address]] E error_;
         char dummy_;
     };
 
@@ -457,6 +457,10 @@ struct NonTrivialStorage
         }
     }
 
+    /// Re-introduce
+    using Base::assign_empty;
+
+    /// Overrides (actually shadows) the `Base` assign_value
     template <typename... Ts>
     constexpr void assign_value(Ts&&... ts) {
         this->clear();
@@ -464,6 +468,7 @@ struct NonTrivialStorage
         new ((void*)std::addressof(this->value())) T(std::forward<Ts>(ts)...);
     }
 
+    /// Overrides (actually shadows) the `Base` assign_error
     template <typename... Es>
     constexpr void assign_error(Es&&... es) {
         this->clear();
@@ -471,6 +476,7 @@ struct NonTrivialStorage
         new ((void*)std::addressof(this->value())) E(std::forward<Es>(es)...);
     }
 
+    /// Overrides (actually shadows) the `Base` assign
     template <typename U>
     constexpr void assign(U&& rhs) {
         if constexpr (std::is_same_v<std::decay_t<U>, NonTrivialStorage>) {
