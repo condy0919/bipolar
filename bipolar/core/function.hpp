@@ -79,6 +79,15 @@ class Function<R(Args...)> {
         void (*destroy)(const Function* pf);
         R (*call)(const Function* pf, Args...);
     };
+    
+    static void empty_destroy_(const Function*) {}
+    static R empty_call_(const Function*, Args...) {
+        throw std::bad_function_call();
+    }
+    static constexpr Vtable empty_vtable_ = {
+        empty_destroy_,
+        empty_call_
+    };
 
 public:
     /// @{
@@ -91,24 +100,9 @@ public:
     /// Function<int()> empty2(nullptr);
     /// assert(bool(empty2) == false);
     /// ```
-    Function() noexcept {
-        struct Op {
-            static void destroy(const Function*) {}
-            static R call(const Function*, Args...) {
-                throw std::bad_function_call();
-            }
-        };
+    constexpr Function() noexcept : vtbl_(&empty_vtable_), avail_(false), stg_() {}
 
-        static constexpr Vtable vtable = {
-            Op::destroy,
-            Op::call,
-        };
-
-        vtbl_ = &vtable;
-        avail_ = false;
-    }
-
-    Function(std::nullptr_t) noexcept : Function() {}
+    constexpr Function(std::nullptr_t) noexcept : Function() {}
     /// @}
 
     /// `Function` is move-only
@@ -140,8 +134,7 @@ public:
                                 Function>,
             int> = 0>
     explicit Function(F&& f) noexcept(Insitu<F>)
-        : Function(std::move(f), std::conditional_t<Insitu<F>, std::true_type,
-                                                    std::false_type>{}) {}
+        : Function(std::move(f), std::bool_constant<Insitu<F>>{}) {}
 
     /// `Function` move constructor
     Function(Function&& rhs) noexcept : Function() {
@@ -282,33 +275,29 @@ private:
 
 /// Swaps the targets of two polymorphic function object wrappers
 template <typename T>
-inline constexpr void swap(Function<T>& lhs, Function<T>& rhs) noexcept {
+inline void swap(Function<T>& lhs, Function<T>& rhs) noexcept {
     lhs.swap(rhs);
 }
 
 /// @{
 /// Compares a polymorphic function object wrapper against `nullptr`
 template <typename T>
-inline constexpr bool operator==(const Function<T>& lhs,
-                                 std::nullptr_t) noexcept {
+inline bool operator==(const Function<T>& lhs, std::nullptr_t) noexcept {
     return !static_cast<bool>(lhs);
 }
 
 template <typename T>
-inline constexpr bool operator==(std::nullptr_t,
-                                 const Function<T>& lhs) noexcept {
+inline bool operator==(std::nullptr_t, const Function<T>& lhs) noexcept {
     return !static_cast<bool>(lhs);
 }
 
 template <typename T>
-inline constexpr bool operator!=(const Function<T>& lhs,
-                                 std::nullptr_t) noexcept {
+inline bool operator!=(const Function<T>& lhs, std::nullptr_t) noexcept {
     return static_cast<bool>(lhs);
 }
 
 template <typename T>
-inline constexpr bool operator!=(std::nullptr_t,
-                                 const Function<T>& lhs) noexcept {
+inline bool operator!=(std::nullptr_t, const Function<T>& lhs) noexcept {
     return static_cast<bool>(lhs);
 }
 /// @}
