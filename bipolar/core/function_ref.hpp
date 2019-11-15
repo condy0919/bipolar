@@ -79,7 +79,7 @@ private:
     using call_type = R (*)(void*, Args...);
 
     template <typename F>
-    auto make_call() noexcept {
+    constexpr auto make_call() noexcept {
         return [](void* obj, Args... args) -> R {
             return std::invoke(*static_cast<std::add_pointer_t<F>>(obj),
                                std::forward<Args>(args)...);
