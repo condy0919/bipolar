@@ -134,7 +134,7 @@ public:
                                 Function>,
             int> = 0>
     explicit Function(F&& f) noexcept(Insitu<F>)
-        : Function(std::move(f), std::bool_constant<Insitu<F>>{}) {}
+        : Function(std::forward<F>(f), std::bool_constant<Insitu<F>>{}) {}
 
     /// `Function` move constructor
     Function(Function&& rhs) noexcept : Function() {
@@ -158,7 +158,7 @@ public:
                                 Function>,
             int> = 0>
     Function& operator=(F&& f) noexcept(Insitu<F>) {
-        Function(std::move(f)).swap(*this);
+        Function(std::forward<F>(f)).swap(*this);
         return *this;
     }
 
@@ -208,7 +208,7 @@ private:
 
             static void init(Function* pf, F&& f) {
                 new (const_cast<void*>(static_cast<const void*>(access(pf))))
-                    F(std::move(f));
+                    F(std::forward<F>(f));
             }
 
             static void destroy(const Function* pf) {
@@ -230,7 +230,7 @@ private:
 
         vtbl_ = &vtable;
         avail_ = true;
-        Op::init(this, std::move(f));
+        Op::init(this, std::forward<F>(f));
     }
 
     // heap case
@@ -242,7 +242,7 @@ private:
             }
 
             static void init(Function* pf, F&& f) {
-                pf->stg_.ptr_ = new F(std::move(f));
+                pf->stg_.ptr_ = new F(std::forward<F>(f));
             }
 
             static void destroy(const Function* pf) {
@@ -261,7 +261,7 @@ private:
 
         vtbl_ = &vtable;
         avail_ = true;
-        Op::init(this, std::move(f));
+        Op::init(this, std::forward<F>(f));
     }
 
 private:
