@@ -66,7 +66,7 @@ public:
 
     constexpr FunctionRef& operator=(const FunctionRef&) noexcept = default;
 
-    constexpr R operator()(Args... args) const {
+    R operator()(Args... args) const {
         return call_(obj_, std::forward<Args>(args)...);
     }
 
@@ -79,7 +79,7 @@ private:
     using call_type = R (*)(void*, Args...);
 
     template <typename F>
-    constexpr auto make_call() noexcept {
+    auto make_call() noexcept {
         return [](void* obj, Args... args) -> R {
             return std::invoke(*static_cast<std::add_pointer_t<F>>(obj),
                                std::forward<Args>(args)...);
