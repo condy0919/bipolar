@@ -193,19 +193,22 @@ private:
     // insitu case
     template <typename F>
     explicit Function(F&& f, std::true_type) noexcept {
+        using NoRefF = std::remove_reference_t<F>;
+
         struct Op {
-            static F* access(const Function* pf) {
-                return static_cast<F*>(const_cast<void*>(
+            static NoRefF* access(const Function* pf) {
+                return static_cast<NoRefF*>(const_cast<void*>(
                     static_cast<const void*>(&pf->stg_.insitu_)));
             }
 
-            static F* access(Function* pf) {
-                return static_cast<F*>(static_cast<void*>(&pf->stg_.insitu_));
+            static std::remove_reference_t<F>* access(Function* pf) {
+                return static_cast<NoRefF*>(
+                    static_cast<void*>(&pf->stg_.insitu_));
             }
 
             static void init(Function* pf, F&& f) {
                 new (const_cast<void*>(static_cast<const void*>(access(pf))))
-                    F(std::forward<F>(f));
+                    NoRefF(std::forward<F>(f));
             }
 
             static void destroy(const Function* pf) {
@@ -233,13 +236,15 @@ private:
     // heap case
     template <typename F>
     explicit Function(F&& f, std::false_type) {
+        using NoRefF = std::remove_reference_t<F>;
+
         struct Op {
-            static F* access(const Function* pf) {
-                return static_cast<F*>(const_cast<void*>(pf->stg_.ptr_));
+            static NoRefF* access(const Function* pf) {
+                return static_cast<NoRefF*>(const_cast<void*>(pf->stg_.ptr_));
             }
 
             static void init(Function* pf, F&& f) {
-                pf->stg_.ptr_ = new F(std::forward<F>(f));
+                pf->stg_.ptr_ = new NoRefF(std::forward<F>(f));
             }
 
             static void destroy(const Function* pf) {
