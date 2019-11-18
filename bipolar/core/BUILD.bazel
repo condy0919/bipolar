@@ -20,6 +20,7 @@ cc_library(
         "function_ref.hpp",
         "internal/enable_special_members.hpp",
         "likely.hpp",
+        "movable.hpp",
         "option.hpp",
         "overload.hpp",
         "result.hpp",

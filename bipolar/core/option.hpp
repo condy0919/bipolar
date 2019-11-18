@@ -47,7 +47,7 @@ inline constexpr bool is_option_v = is_option<T>::value;
 // To support constexpr for Option<T>
 template <typename T>
 union OptionTrivialStorage {
-    T value;
+    [[no_unique_address]] T value;
     char dummy;
 
     constexpr OptionTrivialStorage() : dummy('\0') {}
@@ -61,7 +61,7 @@ union OptionTrivialStorage {
 
 template <typename T>
 union OptionNonTrivialStorage {
-    T value;
+    [[no_unique_address]] T value;
     char dummy;
 
     constexpr OptionNonTrivialStorage() : dummy('\0') {}

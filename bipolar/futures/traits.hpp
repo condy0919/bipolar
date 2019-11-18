@@ -16,7 +16,6 @@ namespace bipolar {
 // forward
 class Context;
 
-/// @{
 /// continuation_traits
 ///
 /// Deduces a continuation's result.
@@ -36,6 +35,7 @@ struct continuation_traits {
     using result_type = std::invoke_result_t<Continuation, Context&>;
 };
 
+/// Checks if it's a continuation type
 template <typename Continuation, typename = void>
 struct is_continuation : std::false_type {};
 
@@ -46,7 +46,6 @@ struct is_continuation<
 
 template <typename Continuation>
 inline constexpr bool is_continuation_v = is_continuation<Continuation>::value;
-/// @}
 
 } // namespace bipolar
 

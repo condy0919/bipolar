@@ -1,5 +1,6 @@
 [![Build Status][github-ci-badge]][github-link]
 [![Codacy Badge][codacy-badge]][codacy-link]
+[![Codecov Badge][codecov-badge]][codecov-link]
 [![MIT License][license-badge]](LICENSE)
 [![Language][language-badge]][language-link]
 
@@ -68,6 +69,8 @@ Checks `bazel-kcov` directory for code coverage.
 [github-link]: https://github.com/condy0919/bipolar
 [codacy-badge]: https://api.codacy.com/project/badge/Grade/7c5e88ade2944d7ca1741d2b3e709f4f
 [codacy-link]: https://www.codacy.com/manual/condy0919/bipolar?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=condy0919/bipolar&amp;utm_campaign=Badge_Grade
+[codecov-badge]: https://codecov.io/gh/condy0919/bipolar/branch/master/graph/badge.svg
+[codecov-link]: https://codecov.io/gh/condy0919/bipolar
 [license-badge]: https://img.shields.io/badge/license-MIT-007EC7.svg
 [language-badge]: https://img.shields.io/badge/Language-C%2B%2B17-blue.svg
 [language-link]: https://en.cppreference.com/w/cpp/compiler_support

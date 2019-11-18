@@ -1,5 +1,6 @@
 #include "bipolar/core/option.hpp"
 
+#include <optional>
 #include <string>
 #include <cstdint>
 
@@ -45,3 +46,21 @@ static void BM_bipolar_option(benchmark::State& state) {
     }
 }
 BENCHMARK(BM_bipolar_option)->Range(1, 1024);
+
+static void BM_std_optional(benchmark::State& state) {
+    const std::size_t n = state.range(0);
+    const auto fn = [](std::size_t arg) -> std::optional<std::string> {
+        if (arg % 2 == 0) {
+            return {};
+        }
+        return std::make_optional("foo"s);
+    };
+
+    for (auto _ : state) {
+        for (std::size_t i = 0; i < n; ++i) {
+            auto opt = fn(i);
+            benchmark::DoNotOptimize(opt);
+        }
+    }
+}
+BENCHMARK(BM_std_optional)->Range(1, 1024);
