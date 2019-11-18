@@ -84,9 +84,14 @@ class Function<R(Args...)> {
     static R empty_call_(const Function*, Args...) {
         throw std::bad_function_call();
     }
+
+    // A constexpr specifier used in static member variable (since C++17)
+    // declaration implies inline.
+    //
+    // See https://en.cppreference.com/w/cpp/language/constexpr
     static constexpr Vtable empty_vtable_ = {
         empty_destroy_,
-        empty_call_
+        empty_call_,
     };
 
 public:
