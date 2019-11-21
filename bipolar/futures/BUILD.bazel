@@ -15,6 +15,13 @@ cc_library(
     ],
     hdrs = [
         "async_result.hpp",
+        "context.hpp",
+        "executor.hpp",
+        "internal/adaptor.hpp",
+        "pending_task.hpp",
+        "promise.hpp",
+        "future_inl.hpp",
+        "suspended_task.hpp",
         "traits.hpp",
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
@@ -29,6 +36,7 @@ cc_test(
     name = "futures_test",
     srcs = [
         "tests/async_result_test.cpp",
+        "tests/promise_test.cpp",
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
