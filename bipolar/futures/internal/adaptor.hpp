@@ -158,27 +158,6 @@ public:
     using NonCallableResultAdaptor<Handler, U, V>::NonCallableResultAdaptor;
 };
 
-// Supports handlers that return `void`
-template <typename Handler, typename T, typename E>
-class ResultAdaptor<Handler, T, E, void, false> : public Movable {
-public:
-    using result_type = AsyncResult<T, E>;
-
-    constexpr explicit ResultAdaptor(MoveOnlyHandler<Handler> handler)
-        : handler_(std::move(handler)) {}
-
-    template <typename... Args>
-    constexpr result_type operator()(Context& ctx, Args&&... args) {
-        (void)ctx;
-        handler_(std::forward<Args>(args)...);
-        return AsyncOk(Void{});
-    }
-
-private:
-    MoveOnlyHandler<Handler> handler_;
-};
-
-// TODO
 // Supports handlers that return `Continuation`/`Promise`
 template <typename Handler, typename T, typename E, typename R>
 class ResultAdaptor<Handler, T, E, R, true> : public Movable {
@@ -194,7 +173,7 @@ public:
     constexpr result_type operator()(Context& ctx, Args&&... args) {
         if (handler_) {
             cont_ = handler_(std::forward<Args>(args)...);
-            handler_.clear();
+            handler_.reset();
         }
         if (!cont_) {
             return AsyncPending{};
@@ -207,6 +186,8 @@ private:
     MoveOnlyHandler<continuation_type> cont_;
 };
 
+// Get the first argument type of argument tuple, then wrap it with `std::tuple`
+// When the tuple is empty, use `std::tuple<>` as default.
 template <typename>
 struct first_or_empty_type_helper;
 
@@ -222,59 +203,39 @@ struct first_or_empty_type_helper<std::tuple<T, Ts...>> {
 
 // Wraps a handler that may or may not have a `Context&` as first argument.
 // This is determined by checking the first argument type.
-template <typename Handler, typename T, typename E,
-          bool =
-              std::is_same_v<typename first_or_empty_type_helper<
-                                 boost::callable_traits::args_t<Handler>>::type,
-                             std::tuple<Context&>>>
-class ContextAdaptor;
-
-// The first argument type of handler is not `Context&`
-// e.g.
+//
+// Signatures with a `Context&` argument:
+// - (Context&)
+// - (Context&, value_type&)
+// - (Context&, const value_type&)
+//
+// Signatures without a `Context&` argument:
 // - ()
 // - (value_type&)
 // - (const value_type&)
 template <typename Handler, typename T, typename E>
-class ContextAdaptor<Handler, T, E, false> {
+class ContextAdaptor {
     using adaptor_type = ResultAdaptor<Handler, T, E>;
+
+    static constexpr bool has_context_arg =
+        std::is_same_v<typename first_or_empty_type_helper<
+                           boost::callable_traits::args_t<Handler>>::type,
+                       std::tuple<Context&>>;
 
 public:
     using result_type = typename adaptor_type::result_type;
-
-    static constexpr std::size_t next_arg_index = 0;
+    static constexpr std::size_t next_arg_index = has_context_arg ? 1 : 0;
 
     constexpr explicit ContextAdaptor(Handler handler)
         : adaptor_(std::move(handler)) {}
 
     template <typename... Args>
     constexpr result_type operator()(Context& ctx, Args&&... args) {
-        return adaptor_(ctx, std::forward<Args>(args)...);
-    }
-
-private:
-    adaptor_type adaptor_;
-};
-
-// The first argument type of handler is `Context&`
-// e.g.
-// - (Context&)
-// - (Context&, value_type&)
-// - (Context&, const value_type&)
-template <typename Handler, typename T, typename E>
-class ContextAdaptor<Handler, T, E, true> {
-    using adaptor_type = ResultAdaptor<Handler, T, E>;
-
-public:
-    using result_type = typename adaptor_type::result_type;
-
-    static constexpr std::size_t next_arg_index = 1;
-
-    constexpr explicit ContextAdaptor(Handler handler)
-        : adaptor_(std::move(handler)) {}
-
-    template <typename... Args>
-    constexpr result_type operator()(Context& ctx, Args&&... args) {
-        return adaptor_(ctx, ctx, std::forward<Args>(args)...);
+        if constexpr (has_context_arg) {
+            return adaptor_(ctx, ctx, std::forward<Args>(args)...);
+        } else {
+            return adaptor_(ctx, std::forward<Args>(args)...);
+        }
     }
 
 private:
@@ -485,24 +446,28 @@ private:
 // The continuation produced by `Promise::inspect()`
 template <typename Promise, typename InspectHandler>
 class InspectContinuation {
-    using invoker_type =
-        ResultHandlerInvoker<InspectHandler, typename Promise::result_type>;
-
 public:
     constexpr InspectContinuation(Promise p, InspectHandler handler)
-        : promise_(std::move(p)), invoker_(std::move(handler)) {}
+        : promise_(std::move(p)), inspector_(std::move(handler)) {}
 
     constexpr typename Promise::result_type operator()(Context& ctx) {
         auto result = promise_(ctx);
         if (result) {
-            invoker_(ctx, result);
+            if constexpr (std::is_invocable_v<
+                              InspectHandler,
+                              std::add_lvalue_reference_t<
+                                  typename Promise::result_type>>) {
+                inspector_(result);
+            } else {
+                inspector_(ctx, result);
+            }
         }
         return result;
     }
 
 private:
     Promise promise_;
-    invoker_type invoker_;
+    InspectHandler inspector_;
 };
 
 // The continuation produced by `Promise::discard_result()`

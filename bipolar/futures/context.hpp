@@ -32,7 +32,7 @@ class Executor;
 class Context {
 public:
     /// Gets the `Executor` that is running the task, never null.
-    virtual Executor& get_executor() const = 0;
+    virtual Executor* get_executor() const = 0;
 
     /// Obtains a handle that can be used to resume the task after it has been
     /// suspended.

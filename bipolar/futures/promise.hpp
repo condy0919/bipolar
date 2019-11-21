@@ -17,6 +17,8 @@
 #include "bipolar/futures/internal/adaptor.hpp"
 #include "bipolar/futures/traits.hpp"
 
+#include <boost/callable_traits.hpp>
+
 namespace bipolar {
 // forward
 template <typename>
@@ -225,11 +227,11 @@ public:
     /// BoxedPromise<Void, Void> g = std::move(f);
     /// ```
     template <
-        typename OtherContinuation>
-        // std::enable_if_t<
-        //     !std::is_same_v<Continuation, OtherContinuation> &&
-        //         std::is_constructible_v<Continuation, OtherContinuation&&>,
-        //     int> = 0>
+        typename OtherContinuation,
+        std::enable_if_t<
+            !std::is_same_v<Continuation, OtherContinuation> &&
+                std::is_constructible_v<Continuation, OtherContinuation&&>,
+            int> = 0>
     constexpr PromiseImpl(PromiseImpl<OtherContinuation> rhs) noexcept(
         std::is_nothrow_constructible_v<Continuation, OtherContinuation&&>)
         : cont_(rhs.cont_.has_value()
@@ -268,7 +270,7 @@ public:
     /// Once the continuation returns a ready result, the promise is assigned
     /// an empty continuation.
     ///
-    /// Asserts that the promise is non-empty.
+    /// Throws `OptionEmptyException` when the promise is empty.
     constexpr result_type operator()(Context& ctx) {
         result_type result = (cont_.value())(ctx);
         if (!result.is_pending()) {
@@ -492,6 +494,10 @@ public:
     constexpr auto inspect(InspectHandler handler) {
         static_assert(is_functor_v<InspectHandler>,
                       "InspectHandler must be callable");
+        static_assert(
+            std::is_void_v<
+                boost::callable_traits::return_type_t<InspectHandler>>,
+            "InspectHandler must return void");
 
         assert(cont_.has_value());
         return with_continuation(

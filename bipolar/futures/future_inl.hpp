@@ -1,8 +1,3 @@
-//!
-//!
-//!
-//!
-
 #ifndef BIPOLAR_FUTURES_FUTURE_INL_HPP_
 #define BIPOLAR_FUTURES_FUTURE_INL_HPP_
 
