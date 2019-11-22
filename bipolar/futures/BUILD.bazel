@@ -12,6 +12,7 @@ licenses(["notice"])
 cc_library(
     name = "futures",
     srcs = [
+        "scheduler.cpp",
     ],
     hdrs = [
         "async_result.hpp",
@@ -23,12 +24,14 @@ cc_library(
         "promise.hpp",
         "suspended_task.hpp",
         "traits.hpp",
+        "scheduler.hpp"
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
     deps = [
         "//bipolar/core",
         "@boost//:callable_traits",
+        "@boost//:noncopyable",
     ],
 )
 

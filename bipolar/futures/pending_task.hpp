@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <utility>
 
+#include "bipolar/core/movable.hpp"
 #include "bipolar/core/void.hpp"
 #include "bipolar/futures/context.hpp"
 #include "bipolar/futures/promise.hpp"
@@ -26,7 +27,7 @@ namespace bipolar {
 /// into a pending task.
 ///
 /// See documentation of `Promise` for more information.
-class PendingTask final {
+class PendingTask final : public Movable {
 public:
     /// The type of promise held by this task
     using promise_type = Promise<Void, Void>;
@@ -47,10 +48,6 @@ public:
 
     PendingTask(PendingTask&&) noexcept = default;
     PendingTask& operator=(PendingTask&&) noexcept = default;
-
-    /// `PendingTask` is move-only
-    PendingTask(const PendingTask&) = delete;
-    PendingTask& operator=(const PendingTask&) = delete;
 
     /// Destroys the pending task, releasing its promise
     ~PendingTask() = default;
@@ -79,7 +76,6 @@ public:
 private:
     promise_type promise_;
 };
-
 
 } // namespace bipolar
 
