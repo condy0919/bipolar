@@ -6,8 +6,6 @@
 
 #include "bipolar/futures/pending_task.hpp"
 
-#include <functional>
-
 namespace bipolar {
 /// Executor
 ///

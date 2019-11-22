@@ -47,25 +47,23 @@ public:
 
     ~MoveOnlyHandler() = default;
 
-    // FIXME
-    // rvalue reference
-    template <typename U>
-    // std::enable_if_t<!std::is_same_v<U, MoveOnlyHandler> &&
-    //                      std::is_constructible_v<Handler, U> &&
-    //                      std::is_assignable_v<Handler&, U>,
-    //                  int> = 0>
+    template <typename U,
+              std::enable_if_t<
+                  !std::is_same_v<std::remove_cv_t<std::remove_reference_t<U>>,
+                                  MoveOnlyHandler> &&
+                      std::is_constructible_v<Handler, U>,
+                  int> = 0>
     constexpr MoveOnlyHandler(U&& handler) noexcept(
         std::is_nothrow_constructible_v<Handler, U>) {
         handler_.emplace(std::forward<U>(handler));
     }
 
-    // FIXME
-    // rvalue reference
     template <typename U,
-              std::enable_if_t<!std::is_same_v<U, MoveOnlyHandler> &&
-                                   std::is_constructible_v<Handler, U> &&
-                                   std::is_assignable_v<Handler&, U>,
-                               int> = 0>
+              std::enable_if_t<
+                  !std::is_same_v<std::remove_cv_t<std::remove_reference_t<U>>,
+                                  MoveOnlyHandler> &&
+                      std::is_constructible_v<Handler, U>,
+                  int> = 0>
     constexpr MoveOnlyHandler& operator=(U&& handler) noexcept(
         std::is_nothrow_constructible_v<Handler, U>) {
         handler_.clear();
