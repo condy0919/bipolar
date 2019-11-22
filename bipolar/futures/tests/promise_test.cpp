@@ -1,3 +1,4 @@
+#include <memory>
 #include <string>
 
 #include "bipolar/futures/context.hpp"
@@ -539,4 +540,78 @@ TEST(Promise, discard_result) {
     auto result = promise(ctx);
     EXPECT_TRUE(result.is_ok());
     EXPECT_EQ(result.value(), Void{});
+}
+
+TEST(Promise, join_promises) {
+    std::uint64_t cnt = 0;
+
+    auto p = join_promises(
+        make_ok_promise<int, int>(42),
+        make_error_promise<char, char>('a').or_else([](const char& err) {
+            (void)err;
+            return AsyncError('y');
+        }),
+        make_promise([&]() -> AsyncResult<std::string, int> {
+            if (++cnt == 2) {
+                return AsyncOk("oops"s);
+            }
+            return AsyncPending{};
+        }));
+    EXPECT_TRUE(p);
+
+    auto result = p(ctx);
+    EXPECT_TRUE(p);
+    EXPECT_EQ(cnt, 1);
+    EXPECT_TRUE(result.is_pending());
+
+    result = p(ctx);
+    EXPECT_FALSE(p);
+    EXPECT_EQ(cnt, 2);
+    EXPECT_TRUE(result.is_ok());
+
+    auto& [r0, r1, r2] = result.value();
+    EXPECT_EQ(r0.value(), 42);
+    EXPECT_EQ(r1.error(), 'y');
+    EXPECT_EQ(r2.value(), "oops");
+}
+
+TEST(Promise, join_promises_with_move_only_result) {
+    auto p =
+        join_promises(make_ok_promise<std::unique_ptr<int>, int>(
+                          std::make_unique<int>(10)),
+                      make_error_promise<int, std::unique_ptr<int>>(
+                          std::make_unique<int>(11)))
+            .then(
+                [](AsyncResult<
+                    std::tuple<AsyncResult<std::unique_ptr<int>, int>,
+                               AsyncResult<int, std::unique_ptr<int>>>,
+                    Void>& wrapper) -> AsyncResult<std::unique_ptr<int>, int> {
+                    auto [r0, r1] = wrapper.take_value();
+                    if (r0.is_ok() && r1.is_error()) {
+                        int value = *r0.take_value() + *r1.take_error();
+                        return AsyncOk(std::make_unique<int>(value));
+                    }
+                    return AsyncError(-1);
+                });
+    EXPECT_TRUE(p);
+
+    auto result = p(ctx);
+    EXPECT_FALSE(p);
+    EXPECT_TRUE(result.is_ok());
+    EXPECT_EQ(*result.value(), 21);
+}
+
+TEST(Promise, join_vector_promise) {
+    std::vector<Promise<int, int>> promises;
+    promises.push_back(make_ok_promise<int, int>(42));
+    promises.push_back(make_error_promise<int, int>(-1));
+
+    auto p = join_promise_vector(std::move(promises));
+    EXPECT_TRUE(p);
+
+    auto result = p(ctx);
+    EXPECT_FALSE(p);
+    EXPECT_TRUE(result.is_ok());
+    EXPECT_EQ(result.value()[0].value(), 42);
+    EXPECT_EQ(result.value()[1].error(), -1);
 }

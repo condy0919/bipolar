@@ -1,7 +1,9 @@
 #ifndef BIPOLAR_FUTURES_ADAPTOR_HPP_
 #define BIPOLAR_FUTURES_ADAPTOR_HPP_
 
+#include <algorithm>
 #include <cstdint>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -486,9 +488,11 @@ private:
     Promise promise_;
 };
 
+// The continuation produced by `make_promise()`
 template <typename PromiseHandler>
 using PromiseContinuation = ContextHandlerInvoker<PromiseHandler>;
 
+// The continuation produced by `make_result_promise()`
 template <typename T, typename E>
 class ResultContinuation {
 public:
@@ -502,6 +506,62 @@ public:
 
 private:
     AsyncResult<T, E> result_;
+};
+
+// The continuation produced by `join_promises()`
+template <typename... Promises>
+class JoinContinuation {
+public:
+    constexpr JoinContinuation(Promises... promises)
+        : futures_(std::move(promises)...) {}
+
+    constexpr auto operator()(Context& ctx) {
+        return helper(ctx, std::index_sequence_for<Promises...>{});
+    }
+
+private:
+    template <std::size_t... Is>
+    constexpr auto helper(Context& ctx, std::index_sequence<Is...>)
+        -> AsyncResult<std::tuple<typename Promises::result_type...>, Void> {
+        bool comps[] = {std::get<Is>(futures_)(ctx)...};
+        if (std::all_of(std::begin(comps), std::end(comps),
+                        [](bool b) { return b; })) {
+            return AsyncOk(
+                std::make_tuple(std::get<Is>(futures_).take_result()...));
+        }
+        return AsyncPending{};
+    }
+
+private:
+    std::tuple<FutureImpl<Promises>...> futures_;
+};
+
+// The continuation produced by `join_promise_vector()`
+template <typename Promise>
+class JoinVectorContinuation {
+public:
+    constexpr explicit JoinVectorContinuation(std::vector<Promise> promises)
+        : promises_(std::move(promises)), results_(promises_.size()) {}
+
+    constexpr auto operator()(Context& ctx)
+        -> AsyncResult<std::vector<typename Promise::result_type>, Void> {
+        bool done = true;
+        for (std::size_t i = 0; i < promises_.size(); ++i) {
+            if (!results_[i]) {
+                results_[i] = promises_[i](ctx);
+                done &= static_cast<bool>(results_[i]);
+            }
+        }
+
+        if (done) {
+            return AsyncOk(std::move(results_));
+        }
+        return AsyncPending{};
+    }
+
+private:
+    std::vector<Promise> promises_;
+    std::vector<typename Promise::result_type> results_;
 };
 
 } // namespace internal

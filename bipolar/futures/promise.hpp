@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <type_traits>
+#include <vector>
 
 #include "bipolar/core/function.hpp"
 #include "bipolar/core/option.hpp"
@@ -38,18 +39,19 @@ constexpr PromiseImpl<Continuation> with_continuation(Continuation);
 /// Additional asynchronous tasks can be chained onto the promise using
 /// a variety of combinators such as `then()`.
 ///
-/// The following methods:
-/// - `make_promise()` is to create a promise
-/// - `make_ok_promise()` is to create a promise that immediately return a value
-/// - `make_error_promise()` is to create a promise that immediately returns
-///   an error
-/// - `make_result_promise()` is to create a promise that immediately returns
+/// And some helpful functions/classes:
+/// - `make_promise()` creates a promise with a continuation
+/// - `make_ok_promise()` creates a promise that immediately returns a value
+/// - `make_error_promise()` creates a promise that immediately returns an error
+/// - `make_result_promise()` creates a promise that immediately returns
 ///   a result
-/// - `Future` is to more conveniently hold a promise or its result
-/// - `PendingTask` is to wrap a promise as a pending task for execution
-/// - `Executor` is to execute a pending task
+/// - `Future` more conveniently holds a promise or its result
+/// - `PendingTask` wraps a promise as a pending task for execution
+/// - `Executor` executes a pending task
 ///
-/// # Combinators
+/// Always look to the future; never look back.
+///
+/// # Chaining promises using combinators
 ///
 /// `Promise`s can be chained together using combinators such as `then()` which
 /// consume the original promise(s) and return a new combined promise.
@@ -68,12 +70,12 @@ constexpr PromiseImpl<Continuation> with_continuation(Continuation);
 ///                       when prior promise completes
 /// - `wrap_with()`: applies a wrapper to the promise
 /// - `box()`: wraps the promise's continuation into a `Function`
-/// - `join_promise()`: await multiple promises in an argument list once they
-///                     all complete return a tuple of their results
+/// - `join_promises()`: await multiple promises in an argument list once they
+///                      all complete return a tuple of their results
 /// - `join_promise_vector()`: await multiple promises in a vector once they
 ///                            all complete return a vector of their results
 ///
-/// # Continuation
+/// # Continuations and handlers
 ///
 /// Internally, `Promise` wraps a continuation (a kind of callable object) that
 /// holds the state of the asynchronous task and provides a means for making
@@ -89,9 +91,9 @@ constexpr PromiseImpl<Continuation> with_continuation(Continuation);
 /// interface: clients can provide them in many forms all of which are
 /// documented by the individual functions which consume them. It's pretty easy
 /// to use: the library takes care of wrapping client-supplied handlers of all
-/// supported forms into the continuation it uses internally.
+/// supported forms into the continuations it uses internally.
 ///
-/// # Theory
+/// # Theory of operation
 ///
 /// On its own, a promise is lazy; it only makes progress in response to actions
 /// taken by its owner. The state of the promise never changes spontaneously or
@@ -99,7 +101,7 @@ constexpr PromiseImpl<Continuation> with_continuation(Continuation);
 ///
 /// Typically, a promise is executed by wrapping it into a `PendingTask` and
 /// scheduling it for execution using `Executor::schedule_task()`.
-/// A promise's `operation(Context&)` can also be invoked directly by its owner
+/// A promise's `operator()(Context&)` can also be invoked directly by its owner
 /// from within the scope of another task (this is used to implement combinators
 /// and futures) though the principle is the same.
 ///
@@ -110,61 +112,155 @@ constexpr PromiseImpl<Continuation> with_continuation(Continuation);
 ///
 /// The method of execution and scheduling of each continuation call is left to
 /// the discretion of each executor implementation. Typical executor
-/// implementations may dispath task on an event-driven message loop or on a
+/// implementations may dispath tasks on an event-driven message loop or on a
 /// thread pool. Developers are responsible for selecting appropriate executor
 /// implementations for their programs.
 ///
 /// During each invocation, the executor passes the continuation an execution
 /// context object represented by a subclass of `Context`. The continuation
-/// attempts to make progress then returns a value of type `Result` to indicate
-/// whether it completed successfully (signaled by `AsyncOk`), failed with an
-/// error (signaled by `AsyncError`), or was unable to complete the task during
-/// that invocation (signaled by `AsyncPending`).
+/// attempts to make progress then returns a value of type `AsyncResult` to
+/// indicate whether it completed successfully (signaled by `AsyncOk`), failed
+/// with an error (signaled by `AsyncError`), or was unable to complete the task
+/// during that invocation (signaled by `AsyncPending`).
 /// For example, a continuation may be unable to complete the task if it must
 /// asynchronously await completion of an IO or IPC operation before it can
 /// proceed any futher.
 ///
 /// If the continuation was unable to complete the task during its invocation,
-/// it may to call `Context::suspend_task()` to acquire a `SuspendedTask`
-/// object. The continuation then arranges for the task to be resumed
-/// asynchronously (with `SuspendedTask::resume_task()`) once it becomes
-/// possible for the promise to make forward progress again. Finally, the
-/// continuation returns `AsyncPending` to indicate to the executor that it was
-/// unable to complete the task during that invocation.
+/// it may call `Context::suspend_task()` to acquire a `SuspendedTask` object.
+/// The continuation then arranges for the task to be resumed asynchronously
+/// (with `SuspendedTask::resume_task()`) once it becomes possible for the
+/// promise to make forward progress again. Finally, the continuation returns
+/// `AsyncPending` to indicate to the executor that it was unable to complete
+/// the task during that invocation.
 ///
 /// When the executor receives a pending result from a task's continuation, it
 /// moves the task into a table of suspended tasks. A suspended task is
-/// considered abandoned if has not been resumed and all remaining
+/// considered abandoned if it has not been resumed and all remaining
 /// `SuspendedTask` handles representing it have been dropped. When a task is
 /// abandoned, the executor removes it from its table of suspended tasks and
-/// destroys the task because it is no possible for the task to be resumed or to
-/// make progress from that state.
+/// destroys the task because it is not possible for the task to be resumed
+/// or to make progress from that state.
 ///
 /// See `SingleThreadedExecutor` for a simple executor implementation.
 ///
-/// # Boxed promises
+/// # Boxed and unboxed promises
 ///
 /// To make combination and execution as efficient as possible, the promises
 /// returned by `make_promise()` and by combinators are parameterized by
-/// complicated continuation type that are hard to describe, often consisting
-/// of nested template and lambdas. These are referred to as "unboxed" promises.
-/// In contrast, "boxed" promises are parameterized by a `Function` that hides
-/// (or "erases") the type of the continuation thereby yielding type that is
-/// easier to describe.
+/// complicated continuation types that are hard to describe, often consisting
+/// of nested templates and lambdas. These are referred to as "unboxed"
+/// promises. In contrast, "boxed" promises are parameterized by a `Function`
+/// that hides (or "erases") the type of the continuation thereby yielding type
+/// that is easier to describe.
 ///
 /// You can recognize boxed and unboxed promise by their types.
+/// Here are two examples:
+/// - A boxed promise type: `Promise<Void, Void>` which is an alias for
+///  `PromiseImpl<Function<AsyncResult<Void, Void>(Context&)>>`
+/// - A unboxed promise type: `PromiseImpl<internal::ThenContinuation<...>>`
 ///
 /// Although boxed promises are easier to manipulate, they may cause the
 /// continuation to be allocated on the heap. Chaining boxed promises can result
 /// in multiple allocations being produced.
 ///
-/// Conversely, unboxed promises has full type information. Not only does this
+/// Conversely, unboxed promises have full type information. Not only does this
 /// defer heap allocation but is also makes it easier for the c++ compiler to
 /// fuse a chains of unboxed promises together into a single object that is
 /// easier to optimize.
 ///
 /// Unboxed promises can be boxed by assigning them to a boxed promise type
-/// (such as `BoxedPromise`) or using the `box()` combinator.
+/// (such as `Promise<Void, Void>`) or using the `box()` combinator.
+///
+/// As a rule of thumb, always defer boxing of promises until it is necessary
+/// to transport them using a simpler type.
+///
+/// Do this: (Chaining as a single expression performs at most one heap
+/// allocation)
+///
+/// ```
+/// Promise<Void, Void> = make_promise([]() -> AsyncResult<Void, Void> { ... })
+///     .then([](AsyncResult<Void, Void>& result) { ... })
+///     .and_then([]() { ... });
+/// ```
+///
+/// Or this: (still only performs at most one heap allocation)
+///
+/// ```
+/// auto f = make_promise([]() -> AsyncResult<Void, Void> { ... });
+/// auto g = f.then([](AsyncResult<Void, Void>& result) { ... });
+/// auto h = g.and_then([]() { ... });
+/// auto boxed_h = h.box();
+/// ```
+///
+/// But don't do this: (incurs up to three heap allocations due to eager boxing)
+///
+/// ```
+/// Promise<Void, Void> f = make_promise([]() { ... });
+/// Promise<Void, Void> g = f.then([]() { ... });
+/// Promise<Void, Void> h = g.and_then([]() { ... });
+/// ```
+///
+/// # Single ownership model
+///
+/// Promises have single-ownership semantics. This means that there can only be
+/// at most one reference to the task represented by its continuation along with
+/// any state held by that continuation.
+///
+/// When a combinator is applied to a promise, ownership of its continuation
+/// is transferred to the combined promise, leaving the original promise in an
+/// "empty" state without a continuation. Note that it is an error to attempt
+/// to invoke an empty promise (will assert at runtime).
+///
+/// This model greatly simplifies reasoning about object lifetime. If a promise
+/// goes out of scope without completing its task, the task is considered
+/// "abandoned", causing all associated state ot be destroyed.
+///
+/// Note that a promise may capture reference to other objects whose lifetime
+/// differs from that of the promise. It is the responsibility of the promise
+/// to ensure reachability of the object whose reference it capture such as by
+/// using reference counted pointers, weak ppointers, or other appropriate
+/// mechanisms to ensure memory safety.
+///
+/// # Threading model
+///
+/// Promise objects are not thread-safe themselves. You cannot call their
+/// methods concurrently (or re-entrantly). However, promises can safely be
+/// moved to other threads and executed there (unless their continuation
+/// required thread affinity for some reason but that's beyond the scope
+/// of this document).
+///
+/// This property of being thread-independent, combined with the single
+/// ownership model, greatly simplifies the implementation of thread pool
+/// based executors.
+///
+/// # Result retention and AsyncResult
+///
+/// A promise's continuation can only be executed to completion once.
+/// After it completes, it cannot be run again.
+///
+/// This method of execution is very efficient; the promise's result is returned
+/// directly to its invoker; it is not copied or retained within the promise
+/// object itself. It is entirely the caller's responsibility to decide how to
+/// consume or retain the result if needed.
+///
+/// For example, the caller can move the promise into a `Future` to
+/// more conveniently hold either the promise or its result upon completion.
+///
+/// # Clarification of nomenclature
+///
+/// In this library, the words "promise" and "future" have the following
+/// definitions:
+/// - A *promise* holds the function that performs an asynchronous task.
+///   It is the means to produce a value.
+/// - A *future* holds the value produced by an asynchronous task or a promise
+///   to produce that value if the task has not yet completed.
+///   It is a proxy for a value that is to be computed.
+///
+/// Be aware that other libraries may use theses terms slightly differently.
+///
+/// For more information about the theory of futures and promises, see
+/// https://en.wikipedia.org/wiki/Futures_and_promises
 ///
 template <typename T = Void, typename E = Void>
 using Promise = PromiseImpl<Function<AsyncResult<T, E>(Context&)>>;
@@ -618,13 +714,13 @@ constexpr bool operator==(std::nullptr_t,
 
 template <typename Continuation>
 constexpr bool operator!=(const PromiseImpl<Continuation>& p,
-                                 std::nullptr_t) noexcept {
+                          std::nullptr_t) noexcept {
     return !!p;
 }
 
 template <typename Continuation>
 constexpr bool operator!=(std::nullptr_t,
-                                 const PromiseImpl<Continuation>& p) noexcept {
+                          const PromiseImpl<Continuation>& p) noexcept {
     return !!p;
 }
 
@@ -746,6 +842,65 @@ constexpr auto make_error_promise(E&& error) {
 template <typename T, typename E>
 constexpr auto make_error_promise(const E& error) {
     return make_result_promise<T, E>(AsyncError(error));
+}
+
+/// join_promises
+///
+/// Jointly evaluates zero or more promises.
+/// Returns a promise that produces a `std::tuple` containing the result
+/// of each promise once they all complete.
+///
+/// # Examples
+///
+/// ```
+/// auto get_random_number() {
+///     return make_ok_promise<int, int>(random() % 10);
+/// }
+///
+/// auto get_random_product() {
+///     auto f = get_random_number();
+///     auto g = get_random_number();
+///     return join_promises(std::move(f), std::move(g))
+///         .and_then([](std::tuple<AsyncResult<int, int>,
+///                                 AsyncResult<int, int>>& results) {
+///             auto& [r0, r1] = results;
+///             return AsyncOk(r0.value() + r1.value);
+///         });
+/// }
+/// ```
+template <typename... Promises>
+constexpr auto join_promises(Promises... promises) {
+    return PromiseImpl(
+        internal::JoinContinuation<Promises...>(std::move(promises)...));
+}
+
+/// join_promise_vector
+///
+/// Jointly evaluates zero or more homogenous promises (same result type).
+/// Returns a promise that produces a `std::vector` containing the result
+/// of each promise once the all complete.
+///
+/// # Examples
+///
+/// ```
+/// auto get_random_number() {
+///     return make_o_promise<int, int>(random() % 10);
+/// }
+///
+/// auto get_random_product() {
+///     std::vector<Promise<int, int>> promises;
+///     promises.push_back(get_random_number());
+///     promises.push_back(get_random_number());
+///     return join_promise_vector(std::move(promises))
+///         .and_then([](std::vector<AsyncResult<int, int>>& results) {
+///             return AsyncOk(results[0].value() + results[1].value());
+///         });
+/// }
+/// ```
+template <typename T, typename E>
+constexpr auto join_promise_vector(std::vector<Promise<T, E>> promises) {
+    return PromiseImpl(
+        internal::JoinVectorContinuation<Promise<T, E>>(std::move(promises)));
 }
 
 // Makes a promise containing the specified continuation.
