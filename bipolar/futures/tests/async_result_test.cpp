@@ -53,12 +53,12 @@ TEST(AsyncResult, MoveOnly) {
     AsyncResult<MoveOnly, Void> good = AsyncOk(MoveOnly{});
     EXPECT_TRUE(good.is_ok());
 
-    // // @TODO clang failed to pass test
-    // // It's more likely the `no_unique_address` clang bug
-    // AsyncResult<MoveOnly, Void> tmpmove = std::move(good);
-    // EXPECT_TRUE(tmpmove.is_ok());
-    // EXPECT_FALSE(good.is_ok());
-    // EXPECT_TRUE(good.is_pending());
+    // The story behind the test
+    // https://github.com/condy0919/bipolar/issues/21
+    AsyncResult<MoveOnly, Void> tmpmove = std::move(good);
+    EXPECT_TRUE(tmpmove.is_ok());
+    EXPECT_FALSE(good.is_ok());
+    EXPECT_TRUE(good.is_pending());
 }
 
 TEST(AsyncResult, Take) {
