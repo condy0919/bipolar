@@ -17,7 +17,7 @@
 namespace bipolar {
 /// PendingTask
 ///
-/// A pending task holds a `BoxedPromise` that can be scheduled to run on an
+/// A pending task holds a `Promise` that can be scheduled to run on an
 /// `Executor` using `Executor::schedule_task()`.
 ///
 /// An `Executor` repeatedly invokes a pending task until it returns true,
