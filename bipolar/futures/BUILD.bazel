@@ -40,6 +40,7 @@ cc_test(
     srcs = [
         "tests/async_result_test.cpp",
         "tests/promise_test.cpp",
+        "tests/suspended_task_test.cpp",
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,

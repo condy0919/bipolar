@@ -15,9 +15,9 @@ namespace bipolar {
 /// Represents a task that is awaiting resumption.
 ///
 /// This object has RAII semantics. If the task is not resumed by at least
-/// on holder of it's `SuspendedTask` handles, then it will be destroyed
+/// one holder of its `SuspendedTask` handles, then it will be destroyed
 /// by the executor since it is no longer possible for the task to make
-/// progress. The task is said have been "abandoned".
+/// progress. The task is said has been "abandoned".
 ///
 /// See documentation of `Executor` for more information.
 class SuspendedTask final {
