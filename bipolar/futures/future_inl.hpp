@@ -8,6 +8,7 @@
 #include <cassert>
 #include <variant>
 
+#include "bipolar/core/movable.hpp"
 #include "bipolar/core/void.hpp"
 
 namespace bipolar {
@@ -84,7 +85,7 @@ using Future = FutureImpl<Promise<T, E>>;
 /// Future implementation details.
 /// See `Future` documentation for more information.
 template <typename Promise>
-class FutureImpl final {
+class FutureImpl final : public Movable {
 public:
     /// The type of promise held by the future
     using promise_type = Promise;
@@ -97,10 +98,6 @@ public:
 
     /// The type of value produced when the promise completes with an error
     using error_type = typename result_type::error_type;
-
-    /// `FutureImpl` is move-only
-    FutureImpl(const FutureImpl&) = delete;
-    FutureImpl& operator=(const FutureImpl&) = delete;
 
     /// Creates a future in the empty state
     constexpr FutureImpl() noexcept = default;

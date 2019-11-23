@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "bipolar/core/function.hpp"
+#include "bipolar/core/movable.hpp"
 #include "bipolar/core/option.hpp"
 #include "bipolar/core/traits.hpp"
 #include "bipolar/core/void.hpp"
@@ -267,7 +268,7 @@ using Promise = PromiseImpl<Function<AsyncResult<T, E>(Context&)>>;
 
 /// See documentation of `Promise` for more information
 template <typename Continuation>
-class PromiseImpl final {
+class PromiseImpl final : public Movable {
     // A continuation is a callable object with this signature:
     // AsyncResult<T, E>(Context&)
     static_assert(is_continuation_v<Continuation>,
@@ -291,10 +292,6 @@ public:
     /// A continuation must be assigned before the promise can be used.
     constexpr PromiseImpl() noexcept = default;
     constexpr explicit PromiseImpl(std::nullptr_t) noexcept {}
-
-    /// `Promise` is move-only
-    PromiseImpl(const PromiseImpl&) = delete;
-    PromiseImpl& operator=(const PromiseImpl&) = delete;
 
     /// Constructs/Assigns the promise by taking the continuation from another
     /// promise, leaving the other promise empty.
