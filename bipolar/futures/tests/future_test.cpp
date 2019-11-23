@@ -191,6 +191,37 @@ TEST(Future, error_future) {
     EXPECT_EQ(fut.state(), FutureState::EMPTY);
 }
 
+TEST(Future, assignment_and_swap) {
+    Future<Void, Void> x;
+    EXPECT_EQ(x.state(), FutureState::EMPTY);
+
+    x = AsyncOk(Void{});
+    EXPECT_EQ(x.state(), FutureState::OK);
+
+    x = AsyncError(Void{});
+    EXPECT_EQ(x.state(), FutureState::ERROR);
+
+    x = AsyncPending{};
+    EXPECT_EQ(x.state(), FutureState::EMPTY);
+
+    x = nullptr;
+    EXPECT_EQ(x.state(), FutureState::EMPTY);
+
+    x = Promise<Void, Void>();
+    EXPECT_EQ(x.state(), FutureState::EMPTY);
+
+    x = make_promise([]() { return AsyncOk(Void{}); });
+    EXPECT_EQ(x.state(), FutureState::PENDING);
+
+    Future<Void, Void> y(std::move(x));
+    EXPECT_EQ(y.state(), FutureState::PENDING);
+    EXPECT_EQ(x.state(), FutureState::EMPTY);
+
+    x.swap(y);
+    EXPECT_EQ(y.state(), FutureState::EMPTY);
+    EXPECT_EQ(x.state(), FutureState::PENDING);
+}
+
 TEST(Future, make_future) {
     FakeContext ctx;
     std::uint64_t cnt = 0;
