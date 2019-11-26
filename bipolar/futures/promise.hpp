@@ -619,7 +619,6 @@ public:
             internal::DiscardResultContinuation<PromiseImpl>(std::move(*this)));
     }
 
-    // TODO document
     /// Applies a `wrapper` to the promise. Invokes the wrapper's `wrap()`
     /// method, passes the promise to the wrapper by value followed by any
     /// additional `args` passed to `wrap_with()`, then returns the wrapper's
@@ -637,7 +636,35 @@ public:
     /// In the example, `Sequencer` is a wrapper type that imposes FIFO
     /// execution order onto a sequence of wrapper promise.
     ///
+    /// ```
+    /// // This wrapper type is intended to be applied to
+    /// // a sequence of promises so we store it in a variable
+    /// Sequencer seq;
     ///
+    /// // This task consists of some amount of work that must be
+    /// // completed sequentially followed by other work that can
+    /// // happen in any order. We use `wrap_with()` to wrap the
+    /// // sequential work with the sequencer.
+    /// Promise<Void, Void> perform_complex_task() {
+    ///     return make_promise([]() { /* do sequential work */ })
+    ///         .then([](AsyncResult<Void, Void>& result) { /* wrapped */ })
+    ///         .wrap_with(seq)
+    ///         .then([](AsyncResult<Void, Void>& result) { /* more */ });
+    /// }
+    /// ```
+    ///
+    /// This example can also be written without using `wrap_with()`.
+    /// The behavior is equivalent but the syntax may seem more awkward.
+    ///
+    /// ```
+    /// Sequencer seq;
+    ///
+    /// Promise<Void, Void> perform_complex_task() {
+    ///     return seq.wrap(
+    ///             make_promise([]() { /* sequential work */ })
+    ///         ).then([](AsyncResult<Void, Void>& result) { /* more */ });
+    /// }
+    /// ```
     template <typename Wrapper, typename... Args>
     constexpr auto wrap_with(Wrapper& wrapper, Args&&... args) {
         assert(cont_.has_value());
