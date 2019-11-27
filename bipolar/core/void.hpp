@@ -8,6 +8,10 @@
 //! Introduce here for facilitating template meta-programming.
 //!
 //! [`void`]: http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2016/p0146r1.html
+//!
+//! # Issues
+//!
+//! - https://github.com/condy0919/bipolar/issues/21
 
 #ifndef BIPOLAR_CORE_VOID_HPP_
 #define BIPOLAR_CORE_VOID_HPP_
@@ -17,6 +21,8 @@ struct Void {
     constexpr Void() = default;
     constexpr Void(const Void&) = default;
     constexpr Void& operator=(const Void&) = default;
+    constexpr Void(Void&&) = default;
+    constexpr Void& operator=(Void&&) = default;
 
     template <typename T>
     constexpr explicit Void(T&&) noexcept {}

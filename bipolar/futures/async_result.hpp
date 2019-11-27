@@ -132,6 +132,11 @@ public:
         return *this;
     }
 
+    /// Returns true if the result is not pending
+    constexpr explicit operator bool() const noexcept {
+        return !is_pending();
+    }
+
     /// Returns true if the result is still in progress
     constexpr bool is_pending() const {
         return has_nothing(result_);
