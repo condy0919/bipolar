@@ -79,7 +79,7 @@ class Function<R(Args...)> {
         void (*destroy)(const Function* pf);
         R (*call)(const Function* pf, Args...);
     };
-    
+
     static void empty_destroy_(const Function*) {}
     static R empty_call_(const Function*, Args...) {
         throw std::bad_function_call();
