@@ -8,38 +8,3 @@ load(
 package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
-
-cc_library(
-    name = "async",
-    srcs = [
-    ],
-    hdrs = [
-        "pipe.hpp",
-        "properties.hpp",
-        "receiver/callback.hpp",
-        "receiver/primitive.hpp",
-        "receiver/receiver.hpp",
-        "receiver/traits.hpp",
-    ],
-    copts = BIPOLAR_DEFAULT_COPTS,
-    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
-    deps = [
-        "//bipolar/core",
-        "@boost//:mp11",
-    ],
-)
-
-cc_test(
-    name = "async_test",
-    srcs = [
-        "tests/pipe_test.cpp",
-        "tests/properties_test.cpp",
-        "tests/receiver_test.cpp",
-    ],
-    copts = BIPOLAR_TEST_COPTS,
-    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
-    deps = [
-        ":async",
-        "@gtest//:gtest_main",
-    ],
-)
