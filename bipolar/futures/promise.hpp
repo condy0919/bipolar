@@ -1,6 +1,6 @@
+//! Promise
 //!
-//!
-//!
+//! See `Promise` for details
 
 #ifndef BIPOLAR_FUTURES_PROMISE_HPP_
 #define BIPOLAR_FUTURES_PROMISE_HPP_
@@ -295,8 +295,10 @@ public:
 
     /// Constructs/Assigns the promise by taking the continuation from another
     /// promise, leaving the other promise empty.
-    constexpr PromiseImpl(PromiseImpl&& rhs) = default;
-    constexpr PromiseImpl& operator=(PromiseImpl&& rhs) = default;
+    constexpr PromiseImpl(PromiseImpl&& rhs) noexcept(
+        std::is_nothrow_move_constructible_v<Continuation>) = default;
+    constexpr PromiseImpl& operator=(PromiseImpl&& rhs) noexcept(
+        std::is_nothrow_move_assignable_v<Continuation>) = default;
 
     /// Creates a promise with a continuation.
     constexpr explicit PromiseImpl(Continuation continuation) noexcept(
