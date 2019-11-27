@@ -44,8 +44,10 @@ class MoveOnlyHandler : public Movable {
 
 public:
     constexpr MoveOnlyHandler() noexcept = default;
-    constexpr MoveOnlyHandler(MoveOnlyHandler&&) noexcept = default;
-    constexpr MoveOnlyHandler& operator=(MoveOnlyHandler&&) noexcept = default;
+    constexpr MoveOnlyHandler(MoveOnlyHandler&&) noexcept(
+        std::is_nothrow_move_constructible_v<Handler>) = default;
+    constexpr MoveOnlyHandler& operator=(MoveOnlyHandler&&) noexcept(
+        std::is_nothrow_move_constructible_v<Handler>) = default;
 
     ~MoveOnlyHandler() = default;
 
