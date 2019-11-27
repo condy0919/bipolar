@@ -13,6 +13,7 @@ cc_library(
     name = "futures",
     srcs = [
         "scheduler.cpp",
+        "single_threaded_executor.cpp",
     ],
     hdrs = [
         "async_result.hpp",
@@ -22,9 +23,10 @@ cc_library(
         "internal/adaptor.hpp",
         "pending_task.hpp",
         "promise.hpp",
+        "scheduler.hpp",
+        "single_threaded_executor.hpp",
         "suspended_task.hpp",
         "traits.hpp",
-        "scheduler.hpp"
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
@@ -42,12 +44,40 @@ cc_test(
         "tests/future_test.cpp",
         "tests/pending_task_test.cpp",
         "tests/promise_test.cpp",
+        "tests/scheduler_test.cpp",
+        "tests/single_threaded_executor_test.cpp",
         "tests/suspended_task_test.cpp",
     ],
-    copts = BIPOLAR_DEFAULT_COPTS,
+    copts = BIPOLAR_TEST_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
     deps = [
         ":futures",
         "@gtest//:gtest_main",
+    ],
+)
+
+cc_binary(
+    name = "promise_example",
+    srcs = [
+        "examples/promise.cpp",
+    ],
+    copts = BIPOLAR_TEST_COPTS,
+    linkopts = BIPOLAR_DEFAULT_LINKOPTS + ["-pthread"],
+    tags = ["example"],
+    deps = [
+        ":futures",
+    ],
+)
+
+cc_binary(
+    name = "future_example",
+    srcs = [
+        "examples/future.cpp",
+    ],
+    copts = BIPOLAR_TEST_COPTS,
+    linkopts = BIPOLAR_DEFAULT_LINKOPTS + ["-pthread"],
+    tags = ["example"],
+    deps = [
+        ":futures",
     ],
 )
