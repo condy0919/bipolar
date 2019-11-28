@@ -1,0 +1,38 @@
+load(
+    "//bipolar:copts/configure_copts.bzl",
+    "BIPOLAR_DEFAULT_COPTS",
+    "BIPOLAR_DEFAULT_LINKOPTS",
+    "BIPOLAR_TEST_COPTS",
+)
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+cc_library(
+    name = "executors",
+    srcs = [
+    ],
+    hdrs = [
+        "inline_executor.hpp",
+    ],
+    copts = BIPOLAR_DEFAULT_COPTS,
+    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
+    deps = [
+        "//bipolar/futures",
+        "@boost//:noncopyable",
+    ],
+)
+
+cc_test(
+    name = "executors_test",
+    srcs = [
+        "tests/inline_executor_test.cpp",
+    ],
+    copts = BIPOLAR_TEST_COPTS,
+    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
+    deps = [
+        ":executors",
+        "@gtest//:gtest_main",
+    ],
+)
