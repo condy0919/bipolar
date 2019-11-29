@@ -11,14 +11,14 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <variant>
 #include <functional>
 #include <string_view>
 #include <type_traits>
+#include <variant>
 
+#include "bipolar/core/byteorder.hpp"
 #include "bipolar/core/option.hpp"
 #include "bipolar/core/result.hpp"
-#include "bipolar/core/byteorder.hpp"
 
 namespace bipolar {
 // forward
@@ -125,7 +125,8 @@ public:
             sizeof...(Ts) == 8 &&
                 std::conjunction_v<std::is_convertible<Ts, std::uint16_t>...>,
             int> = 0>
-    constexpr IPv6Address(Ts... u16s) noexcept : addr_(std::uint16_t(u16s)...) {}
+    constexpr IPv6Address(Ts... u16s) noexcept
+        : addr_(std::uint16_t(u16s)...) {}
 
     /// Creates a new IPv6 address from four 32-bit words
     template <
@@ -134,7 +135,8 @@ public:
             sizeof...(Ts) == 4 &&
                 std::conjunction_v<std::is_convertible<Ts, std::uint32_t>...>,
             int> = 0>
-    constexpr IPv6Address(Ts... u32s) noexcept : addr_(std::uint32_t(u32s)...) {}
+    constexpr IPv6Address(Ts... u32s) noexcept
+        : addr_(std::uint32_t(u32s)...) {}
 
     /// Creates a new IPv6Address from a `string_view`
     ///
@@ -296,13 +298,11 @@ inline bool operator!=(const IPv6Address& lhs,
     return !(lhs == rhs);
 }
 
-inline bool operator<(const IPv6Address& lhs,
-                      const IPv6Address& rhs) noexcept {
+inline bool operator<(const IPv6Address& lhs, const IPv6Address& rhs) noexcept {
     return lhs.segments() < rhs.segments();
 }
 
-inline bool operator>(const IPv6Address& lhs,
-                      const IPv6Address& rhs) noexcept {
+inline bool operator>(const IPv6Address& lhs, const IPv6Address& rhs) noexcept {
     return rhs < lhs;
 }
 
@@ -316,7 +316,6 @@ inline bool operator>=(const IPv6Address& lhs,
     return !(lhs < rhs);
 }
 /// @}
-
 
 /// IPv4Address
 ///
@@ -373,7 +372,8 @@ public:
     /// IPv4Address v4(addr);
     /// assert(v4.str() == "255.255.255.255");
     /// ```
-    explicit constexpr IPv4Address(struct in_addr addr) noexcept : addr_(addr) {}
+    explicit constexpr IPv4Address(struct in_addr addr) noexcept
+        : addr_(addr) {}
 
     /// Creates a new IPv4Address from four eight-bit octets
     ///
@@ -391,7 +391,7 @@ public:
                            (std::uint32_t(c) << 8) | (std::uint32_t(d)))) {}
 
     /// Creates a new IPv4Address from a `string_view`
-    /// 
+    ///
     /// # Note
     ///
     /// The string should be null-terminated due to inet_pton restriction
@@ -550,7 +550,6 @@ inline constexpr bool operator>=(const IPv4Address& lhs,
     return !(lhs < rhs);
 }
 /// @}
-
 
 /// IPAddress
 ///
