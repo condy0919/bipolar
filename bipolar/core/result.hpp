@@ -1067,9 +1067,9 @@ public:
         return Base::value();
     }
 
-    constexpr const T&& expect(const char* s) const&& {
+    constexpr T&& expect(const char* s) && {
         value_required(s);
-        return Base::value();
+        return std::move(Base::value());
     }
 
     /// Unwraps a result, yielding the content of an `Err`
