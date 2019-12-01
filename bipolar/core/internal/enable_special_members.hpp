@@ -39,7 +39,7 @@ template <bool Enable, bool Noexcept = true, typename Tag = void>
 struct EnableMoveConstructor;
 
 /// EnableMoveAssignment
-/// 
+///
 /// A mixin helper to conditionally enable move assignment
 template <bool Enable, bool Noexcept = true, typename Tag = void>
 struct EnableMoveAssignment;

@@ -193,16 +193,16 @@
 /// ```
 /// Mutex mu;
 /// MyClass myObject BIPOLAR_GUARDED_BY(mu);
-/// 
+///
 /// void lockAndInit() BIPOLAR_ACQUIRE(mu) {
 ///   mu.Lock();
 ///   myObject.init();
 /// }
-/// 
+///
 /// void cleanupAndUnlock() BIPOLAR_RELEASE(mu) {
 ///   myObject.cleanup();
 /// }                          // Warning!  Need to unlock mu.
-/// 
+///
 /// void test() {
 ///   lockAndInit();
 ///   myObject.doSomething();
@@ -222,15 +222,15 @@
 /// private:
 ///   Mutex mu;
 ///   T* data;
-/// 
+///
 /// public:
 ///   // Hide mu from public interface.
 ///   void Lock()   BIPOLAR_ACQUIRE() { mu.Lock(); }
 ///   void Unlock() BIPOLAR_RELEASE() { mu.Unlock(); }
-/// 
+///
 ///   T& getElem(int i) { return data[i]; }
 /// };
-/// 
+///
 /// void test() {
 ///   Container<int> c;
 ///   c.Lock();
@@ -323,10 +323,10 @@
 /// private:
 ///   Mutex mu;
 ///   int a GUARDED_BY(mu);
-/// 
+///
 /// public:
 ///   Mutex* getMu() RETURN_CAPABILITY(mu) { return &mu; }
-/// 
+///
 ///   // analysis knows that getMu() == mu
 ///   void clear() REQUIRES(getMu()) { a = 0; }
 /// };
