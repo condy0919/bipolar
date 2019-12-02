@@ -11,14 +11,14 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <variant>
 #include <functional>
 #include <string_view>
 #include <type_traits>
+#include <variant>
 
+#include "bipolar/core/byteorder.hpp"
 #include "bipolar/core/option.hpp"
 #include "bipolar/core/result.hpp"
-#include "bipolar/core/byteorder.hpp"
 
 namespace bipolar {
 // forward
@@ -125,7 +125,8 @@ public:
             sizeof...(Ts) == 8 &&
                 std::conjunction_v<std::is_convertible<Ts, std::uint16_t>...>,
             int> = 0>
-    constexpr IPv6Address(Ts... u16s) noexcept : addr_(std::uint16_t(u16s)...) {}
+    constexpr IPv6Address(Ts... u16s) noexcept
+        : addr_(std::uint16_t(u16s)...) {}
 
     /// Creates a new IPv6 address from four 32-bit words
     template <
@@ -134,7 +135,8 @@ public:
             sizeof...(Ts) == 4 &&
                 std::conjunction_v<std::is_convertible<Ts, std::uint32_t>...>,
             int> = 0>
-    constexpr IPv6Address(Ts... u32s) noexcept : addr_(std::uint32_t(u32s)...) {}
+    constexpr IPv6Address(Ts... u32s) noexcept
+        : addr_(std::uint32_t(u32s)...) {}
 
     /// Creates a new IPv6Address from a `string_view`
     ///
@@ -284,7 +286,6 @@ private:
     } addr_;
 };
 
-/// @{
 /// Compares IPv6Address with other IPv6Address
 inline bool operator==(const IPv6Address& lhs,
                        const IPv6Address& rhs) noexcept {
@@ -296,13 +297,11 @@ inline bool operator!=(const IPv6Address& lhs,
     return !(lhs == rhs);
 }
 
-inline bool operator<(const IPv6Address& lhs,
-                      const IPv6Address& rhs) noexcept {
+inline bool operator<(const IPv6Address& lhs, const IPv6Address& rhs) noexcept {
     return lhs.segments() < rhs.segments();
 }
 
-inline bool operator>(const IPv6Address& lhs,
-                      const IPv6Address& rhs) noexcept {
+inline bool operator>(const IPv6Address& lhs, const IPv6Address& rhs) noexcept {
     return rhs < lhs;
 }
 
@@ -315,8 +314,6 @@ inline bool operator>=(const IPv6Address& lhs,
                        const IPv6Address& rhs) noexcept {
     return !(lhs < rhs);
 }
-/// @}
-
 
 /// IPv4Address
 ///
@@ -373,7 +370,8 @@ public:
     /// IPv4Address v4(addr);
     /// assert(v4.str() == "255.255.255.255");
     /// ```
-    explicit constexpr IPv4Address(struct in_addr addr) noexcept : addr_(addr) {}
+    explicit constexpr IPv4Address(struct in_addr addr) noexcept
+        : addr_(addr) {}
 
     /// Creates a new IPv4Address from four eight-bit octets
     ///
@@ -391,7 +389,7 @@ public:
                            (std::uint32_t(c) << 8) | (std::uint32_t(d)))) {}
 
     /// Creates a new IPv4Address from a `string_view`
-    /// 
+    ///
     /// # Note
     ///
     /// The string should be null-terminated due to inet_pton restriction
@@ -518,7 +516,6 @@ private:
     } addr_;
 };
 
-/// @{
 /// Compares IPv4Address with other IPv4Address
 inline constexpr bool operator==(const IPv4Address& lhs,
                                  const IPv4Address& rhs) noexcept {
@@ -549,8 +546,6 @@ inline constexpr bool operator>=(const IPv4Address& lhs,
                                  const IPv4Address& rhs) noexcept {
     return !(lhs < rhs);
 }
-/// @}
-
 
 /// IPAddress
 ///
@@ -580,7 +575,7 @@ public:
     /// auto localhost = IPAddress(IPv4Address(127, 0, 0, 1));
     /// assert(localhost.is_ipv4());
     /// ```
-    explicit constexpr IPAddress(const IPv4Address& addr) noexcept
+    constexpr /*implicit*/ IPAddress(const IPv4Address& addr) noexcept
         : family_(AF_INET), addr_(addr) {}
 
     /// Creates an `IPAddress` from `IPv6Address`
@@ -591,7 +586,7 @@ public:
     /// auto localhost = IPAddress(IPv6Address(0, 0, 0, 0, 0, 0, 0, 1));
     /// assert(localhost.is_ipv6());
     /// ```
-    explicit constexpr IPAddress(const IPv6Address& addr) noexcept
+    constexpr /*implicit*/ IPAddress(const IPv6Address& addr) noexcept
         : family_(AF_INET6), addr_(addr) {}
 
     /// `IPv4Address` assignment
@@ -708,7 +703,6 @@ private:
     std::variant<IPv4Address, IPv6Address> addr_;
 };
 
-/// @{
 /// Compares `IPAddress` with other `IPAddress`
 inline bool operator==(const IPAddress& lhs, const IPAddress& rhs) {
     if (lhs.family() == rhs.family()) {
@@ -745,7 +739,6 @@ inline bool operator<=(const IPAddress& lhs, const IPAddress& rhs) {
 inline bool operator>=(const IPAddress& lhs, const IPAddress& rhs) {
     return !(lhs < rhs);
 }
-/// @}
 
 } // namespace bipolar
 

@@ -42,10 +42,11 @@ jobs:
 
       - name: Installing bazel
         run: |
-          curl -OL https://github.com/bazelbuild/bazel/releases/download/0.29.1/bazel-0.29.1-installer-linux-x86_64.sh
-          chmod +x bazel-0.29.1-installer-linux-x86_64.sh
-          ./bazel-0.29.1-installer-linux-x86_64.sh
-          rm ./bazel-0.29.1-installer-linux-x86_64.sh
+          bazel_version=1.2.1
+          curl -OL https://github.com/bazelbuild/bazel/releases/download/${bazel_version}/bazel-${bazel_version}-installer-linux-x86_64.sh
+          chmod +x bazel-${bazel_version}-installer-linux-x86_64.sh
+          ./bazel-${bazel_version}-installer-linux-x86_64.sh
+          rm ./bazel-${bazel_version}-installer-linux-x86_64.sh
           bazel --version
 
       - name: Installing kcov
@@ -60,7 +61,7 @@ jobs:
         run: bazel build //...
 
       - name: Testing
-        run: bazel test //... --test_tag_filters='-io_uring,-benchmark'
+        run: bazel test //... --test_tag_filters='-io_uring,-benchmark' --test_output=errors
 
       - name: Testing with code coverage reports
         run: bazel test --config=kcov //... --test_tag_filters='-io_uring,-benchmark'

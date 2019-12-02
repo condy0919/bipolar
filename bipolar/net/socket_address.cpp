@@ -1,12 +1,13 @@
 #include "bipolar/net/socket_address.hpp"
-#include "bipolar/core/byteorder.hpp"
 
 #include <arpa/inet.h>
 
-#include <cctype>
-#include <numeric>
-#include <charconv>
 #include <algorithm>
+#include <cctype>
+#include <charconv>
+#include <numeric>
+
+#include "bipolar/core/byteorder.hpp"
 
 namespace bipolar {
 Result<SocketAddress, SocketAddressFormatError>

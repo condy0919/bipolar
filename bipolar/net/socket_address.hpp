@@ -58,7 +58,15 @@ public:
     /// assert(addr.addr() == (IPAddress(IPv4Address(127, 0, 0, 1))));
     /// ```
     constexpr SocketAddress(IPAddress addr, std::uint16_t port) noexcept
-        : addr_(addr), port_(port) {}
+        : addr_(std::move(addr)), port_(port) {}
+
+    /// Creates a new `SocketAddress` from the native `sockaddr_in` type
+    constexpr explicit SocketAddress(const struct sockaddr_in* addr) noexcept
+        : addr_(IPv4Address(addr->sin_addr)), port_(addr->sin_port) {}
+
+    /// Creates a new `SocketAddress` from the native `sockaddr_in6` type
+    constexpr explicit SocketAddress(const struct sockaddr_in6* addr) noexcept
+        : addr_(IPv6Address(addr->sin6_addr)), port_(addr->sin6_port) {}
 
     /// Returns the `IPAddress` associated with this socket address
     ///
@@ -178,7 +186,6 @@ private:
     std::uint16_t port_;
 };
 
-/// @{
 /// Compares `SocketAddress` with other `SocketAddress`
 inline bool operator==(const SocketAddress& lhs, const SocketAddress& rhs) {
     return (lhs.addr() == rhs.addr()) && (lhs.port() == rhs.port());
@@ -203,7 +210,6 @@ inline bool operator<=(const SocketAddress& lhs, const SocketAddress& rhs) {
 inline bool operator>=(const SocketAddress& lhs, const SocketAddress& rhs) {
     return !(lhs < rhs);
 }
-/// @}
 
 } // namespace bipolar
 
