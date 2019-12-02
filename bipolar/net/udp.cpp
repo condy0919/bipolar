@@ -36,6 +36,7 @@ Result<UdpSocket, int> UdpSocket::bind(const SocketAddress& sa) noexcept {
                                               : sizeof(struct sockaddr_in6);
     const int ret = ::bind(sock, (const struct sockaddr*)&addr, len);
     if (ret == -1) {
+        ::close(sock);
         return Err(errno);
     }
     return Ok(UdpSocket(sock));
