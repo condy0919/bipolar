@@ -28,10 +28,37 @@ void connected_test(F&& f) {
     f(sender, receiver);
 }
 
+template <typename F>
+void connected_test_v6(F&& f) {
+    auto sender =
+        UdpSocket::bind(SocketAddress(IPv6Address::from_str("::1").value(),
+                                      hton(static_cast<std::uint16_t>(8080))))
+            .expect("couldn't bind to ::1");
+
+    auto receiver =
+        UdpSocket::bind(SocketAddress(IPv6Address::from_str("::1").value(),
+                                      hton(static_cast<std::uint16_t>(8081))))
+            .expect("couldn't bind to ::1");
+
+    sender
+        .connect(SocketAddress(IPv6Address::from_str("::1").value(),
+                               hton(static_cast<std::uint16_t>(8081))))
+        .expect("couldn't connect to 127.0.0.1:8081");
+
+    f(sender, receiver);
+}
+
 } // namespace
 
 TEST(UdpSocket, bind) {
     connected_test([](UdpSocket&, UdpSocket&) {});
+}
+
+TEST(UdpSocket, bind_failed) {
+    const auto addr = SocketAddress(IPv4Address(1, 1, 1, 1), 0);
+    auto socket = UdpSocket::bind(addr);
+    EXPECT_TRUE(socket.has_error());
+    EXPECT_EQ(socket.error(), EADDRNOTAVAIL);
 }
 
 TEST(UdpSocket, try_clone) {
@@ -39,6 +66,25 @@ TEST(UdpSocket, try_clone) {
         auto cloned_sender =
             sender.try_clone().expect("couldn't clone the socet");
         EXPECT_EQ(sender.local_addr(), cloned_sender.local_addr());
+    });
+}
+
+TEST(UdpSocket, try_clone_failed) {
+    auto socket = UdpSocket(-1);
+    auto cloned_socket = socket.try_clone();
+    EXPECT_TRUE(cloned_socket.has_error());
+    EXPECT_EQ(cloned_socket.error(), EBADF);
+}
+
+TEST(UdpSocket, connect) {
+    connected_test([](UdpSocket&, UdpSocket&) {});
+}
+
+TEST(UdpSocket, connect_failed) {
+    connected_test([](UdpSocket& sender, UdpSocket& receiver) {
+        auto result = sender.connect(SocketAddress(IPv4Address(1, 1, 1, 1), 0));
+        EXPECT_TRUE(result.has_error());
+        EXPECT_EQ(result.error(), EINVAL);
     });
 }
 
@@ -89,6 +135,28 @@ TEST(UdpSocket, sendto_and_recvfrom) {
 
         EXPECT_EQ(std::get<1>(recv_result.value()),
                   sender.local_addr().value());
+    });
+}
+
+TEST(UdpSocket, writev_and_readv) {
+    connected_test([](UdpSocket& sender, UdpSocket& receiver) {
+        char send_buf[] = "bizz";
+        char recv_buf[10] = "";
+        struct iovec iov = {
+            .iov_base = send_buf,
+            .iov_len = 4,
+        };
+
+        const auto send_result = sender.writev(&iov, 1);
+        EXPECT_TRUE(send_result.has_value());
+        EXPECT_EQ(send_result.value(), 4);
+
+        iov.iov_base = recv_buf;
+        iov.iov_len = 10;
+        const auto recv_result = receiver.readv(&iov, 1);
+        EXPECT_TRUE(recv_result.has_value());
+        EXPECT_EQ(recv_result.value(), 4);
+        EXPECT_EQ(recv_buf, "bizz"s);
     });
 }
 
@@ -195,9 +263,23 @@ TEST(UdpSocket, peer_addr) {
         EXPECT_TRUE(sender.peer_addr().has_value());
         EXPECT_EQ(sender.peer_addr().value(), receiver.local_addr().value());
     });
+
+    // // ipv6 not supported in ci
+    // connected_test_v6([](UdpSocket& sender, UdpSocket& receiver) {
+    //     EXPECT_TRUE(sender.peer_addr().has_value());
+    //     EXPECT_EQ(sender.peer_addr().value(), receiver.local_addr().value());
+    // });
 }
 
 TEST(UdpSocket, as_fd) {
     auto socket = UdpSocket(-1);
     EXPECT_EQ(socket.as_fd(), -1);
+}
+
+TEST(UdpSocket, take_error) {
+    connected_test([](UdpSocket& sender, UdpSocket& receiver) {
+        const auto err = sender.take_error();
+        EXPECT_TRUE(err.has_value());
+        EXPECT_EQ(err.value(), 0);
+    });
 }

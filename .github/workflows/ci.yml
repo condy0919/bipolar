@@ -61,7 +61,7 @@ jobs:
         run: bazel build //...
 
       - name: Testing
-        run: bazel test //... --test_tag_filters='-io_uring,-benchmark'
+        run: bazel test //... --test_tag_filters='-io_uring,-benchmark' --test_output=errors
 
       - name: Testing with code coverage reports
         run: bazel test --config=kcov //... --test_tag_filters='-io_uring,-benchmark'
