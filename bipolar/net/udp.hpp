@@ -22,7 +22,18 @@ namespace bipolar {
 /// can be `sendto` and `recvfrom` any other socket address.
 ///
 /// After setting a remote address with `connect`, data can be sent to and
-/// received from that address with `send` and `recv`.
+/// received from that address with `send`/`write` and `recv`/`read`.
+///
+/// # Notes about APIs
+///
+/// - `writev`/`readv` can be used in **connected** mode, write/read data
+///   from previously bound address
+/// - `sendmsg` can send message to another destination when address is
+///   set in `msghdr` argument despite of the connected address.
+///   `recvmsg` does the same.
+/// - `sendmmsg` is a extension of `sendmsg` that it can be set to send data
+///   to multiple addresses.
+///   `recvmmsg` is similar.
 ///
 /// # Examples
 ///
@@ -39,12 +50,14 @@ namespace bipolar {
 /// ```
 /// auto socket =
 ///         UdpSocket::bind(
-///             SocketAddress(IPv4Address(), static_cast<std::uint16_t>(8080)))
-///             .expect("couldn't bind to 0.0.0.0:8080");
+///             SocketAddress(IPv4Address(),
+///                           hton(static_cast<std::uint16_t>(8080))))
+///                 .expect("couldn't bind to 0.0.0.0:8080");
 /// ```
 class UdpSocket final : public Movable {
 public:
-    /// Constructs a UDP socket from native handle (file descriptor)
+    /// Constructs a UDP socket from native handle (file descriptor).
+    /// Ownership transfers.
     explicit UdpSocket(int fd) noexcept : fd_(fd) {}
 
     /// Constructs from then given `UdpSocket`, leaving it invalid
@@ -102,7 +115,7 @@ public:
     Result<Void, int> connect(const SocketAddress& sa) noexcept;
 
     /// Sends data on the socket to the address previously bound via `connect`.
-    /// On success, return the number of bytes written.
+    /// On success, returns the number of bytes written.
     ///
     /// `man 2 send` for more information.
     Result<std::size_t, int> send(const void* buf, std::size_t len,
@@ -118,6 +131,38 @@ public:
     Result<std::size_t, int> sendto(const void* buf, std::size_t len,
                                     const SocketAddress& sa,
                                     int flags = 0) noexcept;
+
+    /// An alias of `send`
+    Result<std::size_t, int> write(const void* buf, std::size_t len) noexcept {
+        return send(buf, len);
+    }
+
+    /// Sends data on the socket to the address previously bound via `connect`.
+    /// On success, returns the number of bytes written.
+    ///
+    /// `man 2 writev` for more information.
+    Result<std::size_t, int> writev(const struct iovec* iov,
+                                    std::size_t vlen) noexcept;
+
+    /// Sends a message to the address specified by `msghdr` if no previously
+    /// bound address.
+    /// If a peer address has been bound, the message shall be sent to the
+    /// address in `msghdr` (overriding the bound peer address but not
+    /// overwriting).
+    /// On success, returns the number of bytes written.
+    ///
+    /// `man 2 sendmsg` for more information.
+    Result<std::size_t, int> sendmsg(const struct msghdr* msg,
+                                     int flags = 0) noexcept;
+
+    /// Sends multiple messages on the socket using a single syscall.
+    /// On success, the `msg_len` fields of successive elements of `msgvec`
+    /// are updated to contain the number of bytes written.
+    /// Returns the number of message sent from `msgvec`.
+    ///
+    /// `man 2 sendmmsg` for more information.
+    Result<std::size_t, int> sendmmsg(struct mmsghdr* msgvec, std::size_t vlen,
+                                      int flags = 0) noexcept;
 
     /// Receives data from the socket previously bound via `connect`.
     /// On success, returns the number of bytes read.
@@ -142,6 +187,33 @@ public:
     /// `man 2 recvfrom` for more information.
     Result<std::tuple<std::size_t, SocketAddress>, int>
     recvfrom(void* buf, std::size_t len, int flags = 0) noexcept;
+
+    /// An alias of `recv`
+    Result<std::size_t, int> read(void* buf, std::size_t len) noexcept {
+        return recv(buf, len);
+    }
+
+    /// Receives data on the socket previously bound via `connect`.
+    /// On success, returns the number of bytes read.
+    ///
+    /// `man 2 readv` for more information.
+    Result<std::size_t, int> readv(struct iovec* iov,
+                                   std::size_t vlen) noexcept;
+
+    /// Receives a single datagram message on the socket.
+    /// On success, returns the number of bytes read.
+    ///
+    /// `man 2 recvmsg` for more information.
+    Result<std::size_t, int> recvmsg(struct msghdr* msg,
+                                     int flags = 0) noexcept;
+
+    /// Receives multiple messages on the socket using a single syscall.
+    /// On success, the `msg_len` field of successive elements of `msgvec`
+    /// are updated to contain the number of bytes read.
+    ///
+    /// `man 2 recvmmsg` for more information.
+    Result<std::size_t, int> recvmmsg(struct mmsghdr* msgvec, std::size_t vlen,
+                                      int flags = 0) noexcept;
 
     /// Returns the socket address that this socket was created from
     Result<SocketAddress, int> local_addr() noexcept;

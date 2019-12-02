@@ -2,6 +2,7 @@
 
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/uio.h>
 #include <unistd.h>
 
 #include <cassert>
@@ -56,7 +57,7 @@ Result<Void, int> UdpSocket::connect(const SocketAddress& sa) noexcept {
 
 Result<std::size_t, int> UdpSocket::send(const void* buf, std::size_t len,
                                          int flags) noexcept {
-    const int ret = ::send(fd_, buf, len, flags);
+    const ssize_t ret = ::send(fd_, buf, len, flags);
     if (ret == -1) {
         return Err(errno);
     }
@@ -70,8 +71,36 @@ Result<std::size_t, int> UdpSocket::sendto(const void* buf, std::size_t len,
     const socklen_t addr_len = sa.addr().is_ipv4()
                                    ? sizeof(struct sockaddr_in)
                                    : sizeof(struct sockaddr_in6);
-    const int ret =
+    const ssize_t ret =
         ::sendto(fd_, buf, len, flags, (const struct sockaddr*)&addr, addr_len);
+    if (ret == -1) {
+        return Err(errno);
+    }
+    return Ok(static_cast<std::size_t>(ret));
+}
+
+Result<std::size_t, int> UdpSocket::writev(const struct iovec* iov,
+                                           std::size_t vlen) noexcept {
+    const ssize_t ret = ::writev(fd_, iov, vlen);
+    if (ret == -1) {
+        return Err(errno);
+    }
+    return Ok(static_cast<std::size_t>(ret));
+}
+
+Result<std::size_t, int> UdpSocket::sendmsg(const struct msghdr* msg,
+                                            int flags) noexcept {
+    const ssize_t ret = ::sendmsg(fd_, msg, flags);
+    if (ret == -1) {
+        return Err(errno);
+    }
+    return Ok(static_cast<std::size_t>(ret));
+}
+
+Result<std::size_t, int> UdpSocket::sendmmsg(struct mmsghdr* msgvec,
+                                             std::size_t vlen,
+                                             int flags) noexcept {
+    const int ret = ::sendmmsg(fd_, msgvec, vlen, flags);
     if (ret == -1) {
         return Err(errno);
     }
@@ -80,7 +109,7 @@ Result<std::size_t, int> UdpSocket::sendto(const void* buf, std::size_t len,
 
 Result<std::size_t, int> UdpSocket::recv(void* buf, std::size_t len,
                                          int flags) noexcept {
-    const int ret = ::recv(fd_, buf, len, flags);
+    const ssize_t ret = ::recv(fd_, buf, len, flags);
     if (ret == -1) {
         return Err(errno);
     }
@@ -91,7 +120,7 @@ Result<std::tuple<std::size_t, SocketAddress>, int>
 UdpSocket::recvfrom(void* buf, std::size_t len, int flags) noexcept {
     struct sockaddr_storage addr;
     socklen_t addr_len = sizeof(addr);
-    const int ret =
+    const ssize_t ret =
         ::recvfrom(fd_, buf, len, flags, (struct sockaddr*)&addr, &addr_len);
     if (ret == -1) {
         return Err(errno);
@@ -102,6 +131,34 @@ UdpSocket::recvfrom(void* buf, std::size_t len, int flags) noexcept {
             return std::make_tuple(static_cast<std::size_t>(ret),
                                    std::move(sa));
         });
+}
+
+Result<std::size_t, int> UdpSocket::readv(struct iovec* iov,
+                                          std::size_t vlen) noexcept {
+    const ssize_t ret = ::readv(fd_, iov, vlen);
+    if (ret == -1) {
+        return Err(errno);
+    }
+    return Ok(static_cast<std::size_t>(ret));
+}
+
+Result<std::size_t, int> UdpSocket::recvmsg(struct msghdr* msg,
+                                            int flags) noexcept {
+    const ssize_t ret = ::recvmsg(fd_, msg, flags);
+    if (ret == -1) {
+        return Err(errno);
+    }
+    return Ok(static_cast<std::size_t>(ret));
+}
+
+Result<std::size_t, int> UdpSocket::recvmmsg(struct mmsghdr* msgvec,
+                                             std::size_t vlen,
+                                             int flags) noexcept {
+    const int ret = ::recvmmsg(fd_, msgvec, vlen, flags, nullptr);
+    if (ret == -1) {
+        return Err(errno);
+    }
+    return Ok(static_cast<std::size_t>(ret));
 }
 
 Result<SocketAddress, int> UdpSocket::local_addr() noexcept {
