@@ -185,7 +185,7 @@ Result<SocketAddress, int> UdpSocket::peer_addr() noexcept {
 
 Result<int, int> UdpSocket::take_error() noexcept {
     int optval = 0;
-    socklen_t optlen = 0;
+    socklen_t optlen = sizeof(int);
     const int ret = ::getsockopt(fd_, SOL_SOCKET, SO_ERROR, &optval, &optlen);
     if (ret == -1) {
         return Err(errno);
