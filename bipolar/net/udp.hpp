@@ -16,7 +16,7 @@
 namespace bipolar {
 /// UdpSocket
 ///
-/// A User Datagram Protocol socket.
+/// A User Datagram Protocol socket with RAII semantics.
 ///
 /// After creating a `UdpSocket` by `bind`ing it to a socket address, data
 /// can be `sendto` and `recvfrom` any other socket address.
@@ -97,7 +97,8 @@ public:
     /// ```
     Result<UdpSocket, int> try_clone() noexcept;
 
-    /// Creates a **nonblocking** UDP socket from the given address.
+    /// Creates a **nonblocking** UDP socket from the given address
+    /// With `SO_REUSEPORT` option set.
     ///
     /// # Examples
     ///
@@ -113,6 +114,9 @@ public:
     ///
     /// `man 2 connect` for more information.
     Result<Void, int> connect(const SocketAddress& sa) noexcept;
+
+    /// Closes the socket
+    Result<Void, int> close() noexcept;
 
     /// Sends data on the socket to the address previously bound via `connect`.
     /// On success, returns the number of bytes written.
