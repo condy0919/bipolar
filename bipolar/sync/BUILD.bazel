@@ -1,0 +1,25 @@
+load(
+    "//bipolar:copts/configure_copts.bzl",
+    "BIPOLAR_DEFAULT_COPTS",
+    "BIPOLAR_DEFAULT_LINKOPTS",
+    "BIPOLAR_TEST_COPTS",
+)
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+cc_library(
+    name = "sync",
+    srcs = [
+    ],
+    hdrs = [
+        "spinlock.hpp",
+    ],
+    copts = BIPOLAR_DEFAULT_COPTS,
+    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
+    deps = [
+        "//bipolar/core",
+        "@boost//:noncopyable",
+    ],
+)
