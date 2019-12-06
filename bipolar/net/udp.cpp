@@ -9,6 +9,7 @@
 
 namespace bipolar {
 UdpSocket::~UdpSocket() noexcept {
+    // FIXME diagnose required
     close();
 }
 

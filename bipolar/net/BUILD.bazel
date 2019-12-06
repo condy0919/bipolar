@@ -12,14 +12,18 @@ licenses(["notice"])
 cc_library(
     name = "net",
     srcs = [
+        "epoll.cpp",
         "ip_address.cpp",
         "socket_address.cpp",
+        "tcp.cpp",
         "udp.cpp",
     ],
     hdrs = [
+        "epoll.hpp",
         "internal/native_to_socket_address.hpp",
         "ip_address.hpp",
         "socket_address.hpp",
+        "tcp.hpp",
         "udp.hpp",
     ],
     copts = BIPOLAR_DEFAULT_COPTS,

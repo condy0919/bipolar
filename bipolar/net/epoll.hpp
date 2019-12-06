@@ -18,7 +18,20 @@
 namespace bipolar {
 /// Epoll
 ///
-/// An I/O event notification facility
+/// An I/O event notification facility.
+///
+/// Epoll, from a user-space perspective, can be considered as a container of
+/// two lists:
+/// - the interest list monitoring the registered file descriptors
+/// - the ready list containing the references of ready file descriptors
+///
+/// # Level-triggered vs edge-triggered
+///
+/// If a file descriptor registered with `EPOLLET` (edge-triggered) flag, it
+/// will be delivered only when the state of file descriptor changes.
+///
+/// With level-triggered file descriptor (the default), it will be delivered
+/// unless no events available.
 ///
 /// `man 7 epoll` for more information.
 class Epoll final : public Movable {
