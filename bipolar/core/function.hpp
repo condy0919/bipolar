@@ -104,7 +104,7 @@ public:
     /// Function<int()> empty2(nullptr);
     /// assert(bool(empty2) == false);
     /// ```
-    constexpr Function() noexcept : vtbl_(&empty_vtable_), avail_(false), stg_() {}
+    constexpr Function() noexcept : vtbl_(&empty_vtable_), avail_(false), sto_() {}
     constexpr Function(std::nullptr_t) noexcept : Function() {}
 
     /// `Function` is move-only
@@ -191,7 +191,7 @@ public:
     void swap(Function& rhs) noexcept {
         std::swap(vtbl_, rhs.vtbl_);
         std::swap(avail_, rhs.avail_);
-        std::swap(stg_, rhs.stg_);
+        std::swap(sto_, rhs.sto_);
     }
 
 private:
@@ -203,12 +203,12 @@ private:
         struct Op {
             static NoRefF* access(const Function* pf) {
                 return static_cast<NoRefF*>(const_cast<void*>(
-                    static_cast<const void*>(&pf->stg_.insitu_)));
+                    static_cast<const void*>(&pf->sto_.insitu_)));
             }
 
             static std::remove_reference_t<F>* access(Function* pf) {
                 return static_cast<NoRefF*>(
-                    static_cast<void*>(&pf->stg_.insitu_));
+                    static_cast<void*>(&pf->sto_.insitu_));
             }
 
             static void init(Function* pf, F&& f) {
@@ -245,11 +245,11 @@ private:
 
         struct Op {
             static NoRefF* access(const Function* pf) {
-                return static_cast<NoRefF*>(const_cast<void*>(pf->stg_.ptr_));
+                return static_cast<NoRefF*>(const_cast<void*>(pf->sto_.ptr_));
             }
 
             static void init(Function* pf, F&& f) {
-                pf->stg_.ptr_ = new NoRefF(std::forward<F>(f));
+                pf->sto_.ptr_ = new NoRefF(std::forward<F>(f));
             }
 
             static void destroy(const Function* pf) {
@@ -277,7 +277,7 @@ private:
     union {
         void* ptr_;
         std::aligned_union_t<0, InsituType> insitu_;
-    } stg_;
+    } sto_;
 };
 
 /// Swaps the targets of two polymorphic function object wrappers
