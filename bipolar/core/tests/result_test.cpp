@@ -1,4 +1,5 @@
 #include "bipolar/core/result.hpp"
+#include "bipolar/core/void.hpp"
 #include <string>
 #include <ostream>
 #include <memory>
@@ -9,7 +10,7 @@ using namespace std::literals;
 
 template <typename T, typename E>
 std::ostream& operator<<(std::ostream& os, const Result<T, E>& res) {
-    if (res.has_value()) {
+    if (res.is_ok()) {
         return os << "Ok(" << res.value() << ")";
     } else {
         return os << "Err(" << res.error() << ")";
@@ -21,29 +22,6 @@ struct NoDefault {
     char a, b, c;
 };
 
-TEST(Result, Internal) {
-    const auto empty = make_empty_result<int, int>();
-    EXPECT_TRUE(has_nothing(empty));
-}
-
-TEST(Result, TryMacro) {
-    auto succ = []() -> Result<int, int> {
-        Result<int, int> x = Ok(1);
-        return Ok(BIPOLAR_TRY(x) + 1);
-    };
-    auto succ_result = succ();
-    EXPECT_TRUE(bool(succ_result));
-    EXPECT_EQ(succ_result.value(), 2);
-
-    auto fail = []() -> Result<int, int> {
-        Result<int, int> x = Err(2);
-        return Ok(BIPOLAR_TRY(x) + 1);
-    };
-    auto fail_result = fail();
-    EXPECT_FALSE(bool(fail_result));
-    EXPECT_EQ(fail_result.error(), 2);
-}
-
 TEST(Result, NoDefault) {
     Result<NoDefault, int> x = Ok(NoDefault{42, 42});
     EXPECT_TRUE(bool(x));
@@ -52,7 +30,8 @@ TEST(Result, NoDefault) {
     EXPECT_TRUE(bool(x));
 
     x = Err(42);
-    EXPECT_FALSE(bool(x));
+    EXPECT_FALSE(x.is_ok());
+    EXPECT_TRUE(bool(x));
     EXPECT_EQ(42, x.error());
 }
 
@@ -62,23 +41,17 @@ TEST(Result, String) {
     EXPECT_EQ(*x, "hello");
 }
 
-TEST(Result, Ambiguous) {
-    // Potentially ambiguous and confusing construction and assignment disallowed:
-    EXPECT_FALSE((std::is_constructible<Result<int, int>, int>::value));
-    EXPECT_FALSE((std::is_assignable<Result<int, int>&, int>::value));
-}
-
 TEST(Result, Const) {
     // default construct
     Result<const int, int> ex = Err(0);
-    EXPECT_FALSE(bool(ex));
+    EXPECT_FALSE(ex.is_ok());
     EXPECT_EQ(0, ex.error());
     ex.emplace(4);
     EXPECT_EQ(4, *ex);
     ex.emplace(5);
     EXPECT_EQ(5, *ex);
     ex = Err(42);
-    EXPECT_FALSE(bool(ex));
+    EXPECT_FALSE(ex.is_ok());
     EXPECT_EQ(42, ex.error());
 
     // no assignment allowed
@@ -87,7 +60,7 @@ TEST(Result, Const) {
 
 TEST(Result, Simple) {
     Result<int, int> ex = Err(0);
-    EXPECT_FALSE(bool(ex));
+    EXPECT_FALSE(ex.is_ok());
     EXPECT_EQ(42, ex.value_or(42));
     ex.emplace(4);
     EXPECT_TRUE(bool(ex));
@@ -95,7 +68,7 @@ TEST(Result, Simple) {
     EXPECT_EQ(4, ex.value_or(42));
     EXPECT_EQ(4, ex.value_or_else([](int err) { return err + 1; }));
     ex = Err(-1);
-    EXPECT_FALSE(bool(ex));
+    EXPECT_FALSE(ex.is_ok());
     EXPECT_EQ(-1, ex.error());
     EXPECT_EQ(42, ex.value_or(42));
     EXPECT_EQ(0, ex.value_or_else([](int err) { return err + 1; }));
@@ -167,33 +140,33 @@ struct ExpectingDeleter {
 };
 
 TEST(Result, value_move) {
-    auto ptr = Ok(std::unique_ptr<int, ExpectingDeleter>(
-                      new int(42), ExpectingDeleter{1337}))
-                   .into<int>()
+    auto ptr = Result<std::unique_ptr<int, ExpectingDeleter>, int>(
+                   Ok(std::unique_ptr<int, ExpectingDeleter>(
+                       new int(42), ExpectingDeleter{1337})))
                    .value();
     *ptr = 1337;
 }
 
 TEST(Result, dereference_move) {
-    auto ptr = *Ok(std::unique_ptr<int, ExpectingDeleter>(
-                       new int(42), ExpectingDeleter{1337}))
-                    .into<int>();
+    auto ptr = *Result<std::unique_ptr<int, ExpectingDeleter>, int>(
+        Ok(std::unique_ptr<int, ExpectingDeleter>(new int(42),
+                                                  ExpectingDeleter{1337})));
     *ptr = 1337;
 }
 
 TEST(Result, EmptyConstruct) {
     Result<int, int> ex = Err(42);
-    EXPECT_FALSE(bool(ex));
+    EXPECT_FALSE(ex.is_ok());
     Result<int, int> test1(ex);
-    EXPECT_FALSE(bool(test1));
+    EXPECT_FALSE(test1.is_ok());
     Result<int, int> test2(std::move(ex));
-    EXPECT_FALSE(bool(test2));
+    EXPECT_FALSE(test2.is_ok());
     EXPECT_EQ(42, test2.error());
 }
 
 TEST(Result, Unique) {
     Result<std::unique_ptr<int>, int> ex = Err(-1);
-    EXPECT_FALSE(bool(ex));
+    EXPECT_FALSE(ex.is_ok());
     // empty->emplaced
     ex.emplace(new int(5));
     EXPECT_TRUE(bool(ex));
@@ -210,22 +183,20 @@ TEST(Result, Unique) {
     // move it out by move construct
     Result<std::unique_ptr<int>, int> moved(std::move(ex));
     EXPECT_TRUE(bool(moved));
-    EXPECT_TRUE(bool(ex));
-    EXPECT_EQ(nullptr, ex->get());
+    EXPECT_TRUE(ex.is_pending());
     EXPECT_EQ(7, **moved);
 
     EXPECT_TRUE(bool(moved));
     ex = std::move(moved); // move it back by move assign
-    EXPECT_TRUE(bool(moved));
-    EXPECT_EQ(nullptr, moved->get());
-    EXPECT_TRUE(bool(ex));
+    EXPECT_TRUE(moved.is_pending());
+    EXPECT_TRUE(ex.is_ok());
     EXPECT_EQ(7, **ex);
 }
 
 TEST(Result, Shared) {
     std::shared_ptr<int> ptr;
     Result<std::shared_ptr<int>, int> ex = Err(-1);
-    EXPECT_FALSE(bool(ex));
+    EXPECT_FALSE(ex.is_ok());
     // empty->emplaced
     ex.emplace(new int(5));
     EXPECT_TRUE(bool(ex));
@@ -257,45 +228,26 @@ TEST(Result, Shared) {
     }
 }
 
-TEST(Result, Order) {
-    std::vector<Result<int, int>> vect{
-        {Err(1)},
-        {Ok(3)},
-        {Ok(1)},
-        {Err(2)},
-        {Ok(2)},
-    };
-    std::vector<Result<int, int>> expected{
-        {Err(1)},
-        {Err(2)},
-        {Ok(1)},
-        {Ok(2)},
-        {Ok(3)},
-    };
-    std::sort(vect.begin(), vect.end());
-    EXPECT_EQ(vect, expected);
-}
-
 TEST(Result, SwapMethod) {
     Result<std::string, int> a = Err(0);
     Result<std::string, int> b = Err(0);
 
     a.swap(b);
-    EXPECT_FALSE(a.has_value());
-    EXPECT_FALSE(b.has_value());
+    EXPECT_FALSE(a.is_ok());
+    EXPECT_FALSE(b.is_ok());
 
     a = Ok("hello"s);
-    EXPECT_TRUE(a.has_value());
-    EXPECT_FALSE(b.has_value());
+    EXPECT_TRUE(a.is_ok());
+    EXPECT_FALSE(b.is_ok());
     EXPECT_EQ("hello", a.value());
 
     b.swap(a);
-    EXPECT_FALSE(a.has_value());
-    EXPECT_TRUE(b.has_value());
+    EXPECT_FALSE(a.is_ok());
+    EXPECT_TRUE(b.is_ok());
     EXPECT_EQ("hello", b.value());
 
     a = Ok("bye"s);
-    EXPECT_TRUE(a.has_value());
+    EXPECT_TRUE(a.is_ok());
     EXPECT_EQ("bye", a.value());
 
     a.swap(b);
@@ -308,21 +260,21 @@ TEST(Result, StdSwapFunction) {
     Result<std::string, int> b = Err(1);
 
     std::swap(a, b);
-    EXPECT_FALSE(a.has_value());
-    EXPECT_FALSE(b.has_value());
+    EXPECT_FALSE(a.is_ok());
+    EXPECT_FALSE(b.is_ok());
 
     a = Ok("greeting"s);
-    EXPECT_TRUE(a.has_value());
-    EXPECT_FALSE(b.has_value());
+    EXPECT_TRUE(a.is_ok());
+    EXPECT_FALSE(b.is_ok());
     EXPECT_EQ("greeting", a.value());
 
     std::swap(a, b);
-    EXPECT_FALSE(a.has_value());
-    EXPECT_TRUE(b.has_value());
+    EXPECT_FALSE(a.is_ok());
+    EXPECT_TRUE(b.is_ok());
     EXPECT_EQ("greeting", b.value());
 
     a = Ok("goodbye"s);
-    EXPECT_TRUE(a.has_value());
+    EXPECT_TRUE(a.is_ok());
     EXPECT_EQ("goodbye", a.value());
 
     std::swap(a, b);
@@ -335,47 +287,13 @@ TEST(Result, Comparisons) {
     Result<int, int> o1 = Ok(1);
     Result<int, int> o2 = Ok(2);
 
-    EXPECT_TRUE(o_ <= (o_));
     EXPECT_TRUE(o_ == (o_));
-    EXPECT_TRUE(o_ >= (o_));
 
-    EXPECT_TRUE(o1 < o2);
-    EXPECT_TRUE(o1 <= o2);
-    EXPECT_TRUE(o1 <= (o1));
     EXPECT_TRUE(o1 == (o1));
     EXPECT_TRUE(o1 != o2);
-    EXPECT_TRUE(o1 >= (o1));
-    EXPECT_TRUE(o2 >= o1);
-    EXPECT_TRUE(o2 > o1);
 
-    EXPECT_FALSE(o2 < o1);
-    EXPECT_FALSE(o2 <= o1);
-    EXPECT_FALSE(o2 <= o1);
     EXPECT_FALSE(o2 == o1);
     EXPECT_FALSE(o1 != (o1));
-    EXPECT_FALSE(o1 >= o2);
-    EXPECT_FALSE(o1 >= o2);
-    EXPECT_FALSE(o1 > o2);
-
-    /* folly::Result explicitly doesn't support comparisons with contained value
-    EXPECT_TRUE(1 < o2);
-    EXPECT_TRUE(1 <= o2);
-    EXPECT_TRUE(1 <= o1);
-    EXPECT_TRUE(1 == o1);
-    EXPECT_TRUE(2 != o1);
-    EXPECT_TRUE(1 >= o1);
-    EXPECT_TRUE(2 >= o1);
-    EXPECT_TRUE(2 > o1);
-
-    EXPECT_FALSE(o2 < 1);
-    EXPECT_FALSE(o2 <= 1);
-    EXPECT_FALSE(o2 <= 1);
-    EXPECT_FALSE(o2 == 1);
-    EXPECT_FALSE(o2 != 2);
-    EXPECT_FALSE(o1 >= 2);
-    EXPECT_FALSE(o1 >= 2);
-    EXPECT_FALSE(o1 > 2);
-    */
 }
 
 TEST(Result, Conversions) {
@@ -391,13 +309,10 @@ TEST(Result, Conversions) {
 
     // intended explicit operator bool, for if (ex).
     bool b(mbool);
-    EXPECT_FALSE(b);
+    EXPECT_TRUE(b);
 
     // Truthy tests work and are not ambiguous
     if (mbool && mshort && mstr && mint) {         // only checks not-empty
-        if (*mbool && *mshort && *mstr && *mint) { // only checks value
-            ;
-        }
     }
 
     mbool = Ok(false);
@@ -407,16 +322,13 @@ TEST(Result, Conversions) {
     mbool = Ok(true);
     EXPECT_TRUE(bool(mbool));
     EXPECT_TRUE(*mbool);
-
-    // No conversion allowed; does not compile
-    // mbool == false;
 }
 
 TEST(Result, MakeOptional) {
     // const L-value version
     const std::string s("abc");
     Result<std::string, int> exStr = Ok(s);
-    ASSERT_TRUE(exStr.has_value());
+    ASSERT_TRUE(exStr.is_ok());
     EXPECT_EQ(*exStr, "abc");
     *exStr = "cde";
     EXPECT_EQ(s, "abc");
@@ -425,7 +337,7 @@ TEST(Result, MakeOptional) {
     // L-value version
     std::string s2("abc");
     Result<std::string, int> exStr2 = Ok(s2);
-    ASSERT_TRUE(exStr2.has_value());
+    ASSERT_TRUE(exStr2.is_ok());
     EXPECT_EQ(*exStr2, "abc");
     *exStr2 = "cde";
     // it's vital to check that s2 wasn't clobbered
@@ -434,8 +346,8 @@ TEST(Result, MakeOptional) {
     // L-value reference version
     std::string& s3(s2);
     Result<std::string, int> exStr3 = Ok(s3);
-    ASSERT_TRUE(exStr3.has_value());
-    EXPECT_EQ(*exStr3, "abc");
+    ASSERT_TRUE(exStr3.is_ok());
+    EXPECT_EQ(exStr3.value(), "abc");
     *exStr3 = "cde";
     EXPECT_EQ(s3, "abc");
 
@@ -443,18 +355,8 @@ TEST(Result, MakeOptional) {
     std::unique_ptr<int> pInt(new int(3));
     Result<std::unique_ptr<int>, int> exIntPtr = Ok(std::move(pInt));
     EXPECT_TRUE(pInt.get() == nullptr);
-    ASSERT_TRUE(exIntPtr.has_value());
-    EXPECT_EQ(**exIntPtr, 3);
-}
-
-TEST(Result, SelfAssignment) {
-    Result<std::string, int> a = Ok("42"s);
-    a = static_cast<decltype(a)&>(a); // suppress self-assign warning
-    ASSERT_TRUE(a.has_value() && a.value() == "42");
-
-    Result<std::string, int> b = Ok("23333333"s);
-    b = static_cast<decltype(b)&&>(b); // suppress self-move warning
-    ASSERT_TRUE(b.has_value() && b.value() == "23333333");
+    ASSERT_TRUE(exIntPtr.is_ok());
+    EXPECT_EQ(*exIntPtr.value(), 3);
 }
 
 class ContainsResult {
@@ -462,8 +364,8 @@ public:
    ContainsResult() : ex_(Err(0)) {}
    explicit ContainsResult(int x) : ex_(Ok(x)) {}
 
-   bool has_value() const {
-       return ex_.has_value();
+   bool is_ok() const {
+       return ex_.is_ok();
    }
    int value() const {
        return ex_.value();
@@ -487,22 +389,22 @@ TEST(Result, AssignmentContained) {
     {
         ContainsResult source(5), target;
         target = source;
-        EXPECT_TRUE(target.has_value());
+        EXPECT_TRUE(target.is_ok());
         EXPECT_EQ(5, target.value());
     }
 
     {
         ContainsResult source(5), target;
         target = std::move(source);
-        EXPECT_TRUE(target.has_value());
+        EXPECT_TRUE(target.is_ok());
         EXPECT_EQ(5, target.value());
-        EXPECT_TRUE(source.has_value());
+        EXPECT_FALSE(source.is_ok());
     }
 
     {
         ContainsResult ex_uninit, target(10);
         target = ex_uninit;
-        EXPECT_FALSE(target.has_value());
+        EXPECT_FALSE(target.is_ok());
     }
 }
 
@@ -533,26 +435,6 @@ TEST(Result, NoThrowMoveAssignable) {
                  Result<std::unique_ptr<int>, int>>::value));
     EXPECT_FALSE(
         (std::is_nothrow_move_assignable<Result<ThrowingBadness, int>>::value));
-}
-
-struct NoSelfAssign {
-    NoSelfAssign() = default;
-    NoSelfAssign(NoSelfAssign&&) = default;
-    NoSelfAssign(const NoSelfAssign&) = default;
-    NoSelfAssign& operator=(NoSelfAssign&& that) {
-        EXPECT_NE(this, &that);
-        return *this;
-    }
-    NoSelfAssign& operator=(const NoSelfAssign& that) {
-        EXPECT_NE(this, &that);
-        return *this;
-    }
-};
-
-TEST(Result, NoSelfAssign) {
-    Result<NoSelfAssign, int> e{Ok(NoSelfAssign{})};
-    e = static_cast<decltype(e)&>(e);  // suppress self-assign warning
-    e = static_cast<decltype(e)&&>(e); // @nolint suppress self-move warning
 }
 
 struct NoDestructor {};
@@ -625,7 +507,8 @@ TEST(Result, AndThenOrElse) {
                       .and_then([](int i) -> Result<std::string, int> {
                           return i == 42 ? Ok("yes"s) : Ok("no"s);
                       });
-        EXPECT_FALSE(bool(ex));
+        EXPECT_FALSE(ex.is_ok());
+        EXPECT_FALSE(ex.is_pending());
         EXPECT_EQ(-1, ex.error());
     }
 
@@ -651,14 +534,18 @@ TEST(Result, AndThenOrElse) {
 
 TEST(Result, Map) {
     {
-        auto ex = Ok("233"s).into<int>().map(
-            [](std::string s) -> int { return std::stoi(s); });
+        auto ex =
+            Result<std::string, int>(Ok("233"s)).map([](std::string s) -> int {
+                return std::stoi(s);
+            });
         EXPECT_TRUE(bool(ex));
         EXPECT_EQ(233, *ex);
 
-        auto ex2 =
-            Err("233"s).into<int>().map([](int x) -> int { return x + 1; });
-        EXPECT_FALSE(bool(ex2));
+        auto ex2 = Result<int, std::string>(Err("233"s)).map([](int x) -> int {
+            return x + 1;
+        });
+        EXPECT_FALSE(ex2.is_ok());
+        EXPECT_FALSE(ex2.is_pending());
         EXPECT_EQ(ex2.error(), "233");
     }
 
@@ -675,13 +562,17 @@ TEST(Result, Map) {
     }
 
     {
-        auto ex = Err("233"s).into<int>().map_err(
-            [](std::string s) -> int { return std::stoi(s); });
-        EXPECT_FALSE(bool(ex));
+        auto ex =
+            Result<int, std::string>(Err("233"s))
+                .map_err([](std::string s) -> int { return std::stoi(s); });
+        EXPECT_FALSE(ex.is_ok());
+        EXPECT_FALSE(ex.is_pending());
         EXPECT_EQ(233, ex.error());
 
         auto ex2 =
-            Ok("233"s).into<int>().map_err([](int x) -> int { return x + 1; });
+            Result<std::string, int>(Ok("233"s)).map_err([](int x) -> int {
+                return x + 1;
+            });
         EXPECT_TRUE(bool(ex2));
         EXPECT_EQ("233", *ex2);
     }
@@ -696,14 +587,6 @@ TEST(Result, Contains) {
     const Result<std::string, int> y = Err(-1);
     EXPECT_TRUE(y.contains_err(-1));
     EXPECT_FALSE(y.contains(""));
-}
-
-TEST(Result, OkErr) {
-    const Result<std::string, int> x = Ok("233"s), y = Err(-1);
-    EXPECT_EQ(x.ok(), Some("233"s));
-    EXPECT_EQ(y.ok(), None);
-    EXPECT_EQ(x.err(), None);
-    EXPECT_EQ(y.err(), Some(-1));
 }
 
 TEST(Result, Expect) {
@@ -762,17 +645,6 @@ struct ConvertTo {
         return *this;
     }
 };
-
-static_assert(
-    std::is_same_v<detail::ResultStorage<int, SmallPODConstructTo>,
-                   detail::SmallTrivialStorage<int, SmallPODConstructTo>>);
-
-static_assert(std::is_same_v<detail::ResultStorage<int, LargePODConstructTo>,
-                             detail::TrivialStorage<int, LargePODConstructTo>>);
-
-static_assert(
-    std::is_same_v<detail::ResultStorage<int, NonPODConstructTo>,
-                   detail::NonTrivialStorage<int, NonPODConstructTo>>);
 
 template <typename From, typename To>
 struct IsConvertible : std::bool_constant<std::is_convertible_v<From, To> &&
