@@ -47,8 +47,6 @@ public:
     template <typename Derived,
               std::enable_if_t<std::is_base_of_v<Context, Derived>, int> = 0>
     Derived& as() & {
-        // TODO: benchmark dynamic_cast
-        // TODO: runtime-check
         return static_cast<Derived&>(*this);
     }
 

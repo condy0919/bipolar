@@ -19,9 +19,9 @@ public:
 };
 
 static PendingTask make_pending_task(std::uint64_t* cnt) {
-    return PendingTask(make_promise([cnt]() -> AsyncResult<Void, Void> {
+    return PendingTask(make_promise([cnt]() -> Result<Void, Void> {
         (*cnt)++;
-        return AsyncOk(Void{});
+        return Ok(Void{});
     }));
 }
 

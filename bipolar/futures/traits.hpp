@@ -10,7 +10,7 @@
 
 #include <type_traits>
 
-#include "bipolar/futures/async_result.hpp"
+#include "bipolar/core/result.hpp"
 
 namespace bipolar {
 // forward
@@ -27,9 +27,9 @@ class Context;
 /// assert(is_continuation_v<C>);
 /// ```
 template <typename Continuation,
-          std::enable_if_t<detail::is_async_result_v<
-                               std::invoke_result_t<Continuation, Context&>>,
-                           int> = 0>
+          std::enable_if_t<
+              detail::is_result_v<std::invoke_result_t<Continuation, Context&>>,
+              int> = 0>
 struct continuation_traits {
     using type = Continuation;
     using result_type = std::invoke_result_t<Continuation, Context&>;

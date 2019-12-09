@@ -16,7 +16,7 @@ namespace bipolar {
 ///
 /// # Execution
 ///
-/// An executor evaluates its task incrementally. During each iteration fo the
+/// An executor evaluates its task incrementally. During each iteration of the
 /// executor's main loop, it invokes the next task from its ready queue.
 ///
 /// If the task returns true, then the task is deemed to have completed. The

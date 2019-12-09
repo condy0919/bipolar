@@ -735,12 +735,12 @@ public:
 
     constexpr E&& error() && {
         error_required();
-        return std::get<2>(sto_);
+        return std::move(std::get<2>(sto_));
     }
 
     constexpr const E&& error() const&& {
         error_required();
-        return std::get<2>(sto_);
+        return std::move(std::get<2>(sto_));
     }
 
     /// Takes the result's error, leaving it in a pending state

@@ -15,7 +15,7 @@ TEST(SingleThreadedExecutor, running_tasks) {
     // Schedule a task that runs once and increases a counter
     executor.schedule_task(PendingTask(make_promise([&]() {
         ++cnt[0];
-        return AsyncOk(Void{});
+        return Ok(Void{});
     })));
 
     executor.schedule_task(PendingTask(make_promise([&](Context& ctx) {
@@ -24,9 +24,9 @@ TEST(SingleThreadedExecutor, running_tasks) {
 
         ctx.get_executor()->schedule_task(PendingTask(make_promise([&]() {
             ++cnt[2];
-            return AsyncOk(Void{});
+            return Ok(Void{});
         })));
-        return AsyncOk(Void{});
+        return Ok(Void{});
     })));
 
     EXPECT_EQ(cnt[0], 0);
@@ -48,37 +48,37 @@ TEST(SingleThreadedExecutor, suspending_and_resuming_tasks) {
 
     // Schedule a task that suspends itself and immediately resumes
     executor.schedule_task(
-        PendingTask(make_promise([&](Context& ctx) -> AsyncResult<Void, Void> {
+        PendingTask(make_promise([&](Context& ctx) -> Result<Void, Void> {
             if (++run_cnt[0] == 100) {
-                return AsyncOk(Void{});
+                return Ok(Void{});
             }
             ++resume_cnt[0];
             ctx.suspend_task().resume_task();
-            return AsyncPending{};
+            return Pending{};
         })));
 
     // Schedule a task that requires several iterations to complete, each
     // time scheduling another task to resume itself after suspension
     executor.schedule_task(
-        PendingTask(make_promise([&](Context& ctx) -> AsyncResult<Void, Void> {
+        PendingTask(make_promise([&](Context& ctx) -> Result<Void, Void> {
             if (++run_cnt[1] == 100) {
-                return AsyncOk(Void{});
+                return Ok(Void{});
             }
 
             ctx.get_executor()->schedule_task(
                 PendingTask(make_promise([&, s = ctx.suspend_task()]() mutable {
                     ++resume_cnt[1];
                     s.resume_task();
-                    return AsyncOk(Void{});
+                    return Ok(Void{});
                 })));
-            return AsyncPending{};
+            return Pending{};
         })));
 
     // Same as the above but use another thread to resume
     executor.schedule_task(
-        PendingTask(make_promise([&](Context& ctx) -> AsyncResult<Void, Void> {
+        PendingTask(make_promise([&](Context& ctx) -> Result<Void, Void> {
             if (++run_cnt[2] == 100) {
-                return AsyncOk(Void{});
+                return Ok(Void{});
             }
 
             std::thread t([&, s = ctx.suspend_task()]() mutable {
@@ -87,24 +87,24 @@ TEST(SingleThreadedExecutor, suspending_and_resuming_tasks) {
             });
             t.detach();
 
-            return AsyncPending{};
+            return Pending{};
         })));
 
     // Schedule a task that suspends itself but doesn't actually return pending
     // so it only runs once
     executor.schedule_task(
-        PendingTask(make_promise([&](Context& ctx) -> AsyncResult<Void, Void> {
+        PendingTask(make_promise([&](Context& ctx) -> Result<Void, Void> {
             ++run_cnt[3];
             ctx.suspend_task();
-            return AsyncOk(Void{});
+            return Ok(Void{});
         })));
 
     // Schedule a task that suspends itself and arranges to be resumed on
     // one of two other threads, whichever gets there first
     executor.schedule_task(
-        PendingTask(make_promise([&](Context& ctx) -> AsyncResult<Void, Void> {
+        PendingTask(make_promise([&](Context& ctx) -> Result<Void, Void> {
             if (++run_cnt[4] == 100) {
-                return AsyncOk(Void{});
+                return Ok(Void{});
             }
 
             // Race two threads to resume the task. Either can win
@@ -116,7 +116,7 @@ TEST(SingleThreadedExecutor, suspending_and_resuming_tasks) {
             std::thread([s = ctx.suspend_task()]() mutable {
                 s.resume_task();
             }).detach();
-            return AsyncPending{};
+            return Pending{};
         })));
 
     // We expect the tasks to have been completed after being resumed several
@@ -140,39 +140,39 @@ TEST(SingleThreadedExecutor, abandoning_tasks) {
     // Schedule a task that returns pending without suspending itself
     // so it is immediately abandoned
     executor.schedule_task(
-        PendingTask(make_promise([&]() -> AsyncResult<Void, Void> {
+        PendingTask(make_promise([&]() -> Result<Void, Void> {
             ++run_cnt[0];
-            return AsyncPending{};
+            return Pending{};
         })));
 
     // Schedule a task that suspends itself but drops the `SuspendedTask`
     // object before returning so it is immediately abandoned
     executor.schedule_task(
-        PendingTask(make_promise([&](Context& ctx) -> AsyncResult<Void, Void> {
+        PendingTask(make_promise([&](Context& ctx) -> Result<Void, Void> {
             ++run_cnt[1];
             ctx.suspend_task(); // ignore result
-            return AsyncPending{};
+            return Pending{};
         })));
 
     // Schedule a task that suspends itself and drops the `SuspendedTask`
     // object from a different thread so it is abandoned concurrently
     executor.schedule_task(
-        PendingTask(make_promise([&](Context& ctx) -> AsyncResult<Void, Void> {
+        PendingTask(make_promise([&](Context& ctx) -> Result<Void, Void> {
             ++run_cnt[2];
             std::thread([s = ctx.suspend_task()]() {}).detach();
-            return AsyncPending{};
+            return Pending{};
         })));
 
     // Schedule a task that creates several suspended task handles and drops
     // them all on the floor
     executor.schedule_task(
-        PendingTask(make_promise([&](Context& ctx) -> AsyncResult<Void, Void> {
+        PendingTask(make_promise([&](Context& ctx) -> Result<Void, Void> {
             ++run_cnt[3];
             SuspendedTask s[3];
             for (std::size_t i = 0; i < 3; ++i) {
                 s[i] = ctx.suspend_task();
             }
-            return AsyncPending{};
+            return Pending{};
         })));
 
     // We expect the tasks to have been executed but to have been abandoned
