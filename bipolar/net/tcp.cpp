@@ -160,6 +160,16 @@ Result<int, int> TcpStream::take_error() noexcept {
     return Ok(optval);
 }
 
+Result<struct tcp_info, int> TcpStream::get_tcp_info() noexcept {
+    struct tcp_info info;
+    socklen_t len = sizeof(info);
+    const int ret = ::getsockopt(fd_, SOL_TCP, TCP_INFO, &info, &len);
+    if (ret == -1) {
+        return Err(errno);
+    }
+    return Ok(info);
+}
+
 TcpListener::~TcpListener() noexcept {
     // FIXME diagnose required
     close();

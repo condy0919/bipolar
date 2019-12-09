@@ -7,6 +7,8 @@
 #ifndef BIPOLAR_NET_TCP_HPP_
 #define BIPOLAR_NET_TCP_HPP_
 
+#include <netinet/tcp.h>
+
 #include <tuple>
 #include <utility>
 
@@ -182,6 +184,9 @@ public:
     /// the filed in the process. This can be useful for checking errors
     /// between calls.
     Result<int, int> take_error() noexcept;
+
+    /// Gets the value of the `TCP_INFO` option on this socket.
+    Result<struct tcp_info, int> get_tcp_info() noexcept;
 
     /// Returns the underlying file descriptor.
     ///
