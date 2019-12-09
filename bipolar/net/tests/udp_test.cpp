@@ -57,7 +57,7 @@ TEST(UdpSocket, bind) {
 TEST(UdpSocket, bind_failed) {
     const auto addr = SocketAddress(IPv4Address(1, 1, 1, 1), 0);
     auto socket = UdpSocket::bind(addr);
-    EXPECT_TRUE(socket.has_error());
+    EXPECT_TRUE(socket.is_error());
     EXPECT_EQ(socket.error(), EADDRNOTAVAIL);
 }
 
@@ -72,7 +72,7 @@ TEST(UdpSocket, try_clone) {
 TEST(UdpSocket, try_clone_failed) {
     auto socket = UdpSocket(-1);
     auto cloned_socket = socket.try_clone();
-    EXPECT_TRUE(cloned_socket.has_error());
+    EXPECT_TRUE(cloned_socket.is_error());
     EXPECT_EQ(cloned_socket.error(), EBADF);
 }
 
@@ -83,7 +83,7 @@ TEST(UdpSocket, connect) {
 TEST(UdpSocket, connect_failed) {
     connected_test([](UdpSocket& sender, UdpSocket& receiver) {
         auto result = sender.connect(SocketAddress(IPv4Address(1, 1, 1, 1), 0));
-        EXPECT_TRUE(result.has_error());
+        EXPECT_TRUE(result.is_error());
         EXPECT_EQ(result.error(), EINVAL);
     });
 }
@@ -94,11 +94,11 @@ TEST(UdpSocket, send_and_recv) {
 
     connected_test([&](UdpSocket& sender, UdpSocket& receiver) {
         const auto send_result = sender.send(send_buf, 4);
-        EXPECT_TRUE(send_result.has_value());
+        EXPECT_TRUE(send_result.is_ok());
         EXPECT_EQ(send_result.value(), 4);
 
         const auto recv_result = receiver.recv(recv_buf, 10);
-        EXPECT_TRUE(recv_result.has_value());
+        EXPECT_TRUE(recv_result.is_ok());
         EXPECT_EQ(recv_result.value(), 4);
     });
 }
@@ -109,11 +109,11 @@ TEST(UdpSocket, write_and_read) {
 
     connected_test([&](UdpSocket& sender, UdpSocket& receiver) {
         const auto write_result = sender.write(write_buf, 4);
-        EXPECT_TRUE(write_result.has_value());
+        EXPECT_TRUE(write_result.is_ok());
         EXPECT_EQ(write_result.value(), 4);
 
         const auto read_result = receiver.read(read_buf, 10);
-        EXPECT_TRUE(read_result.has_value());
+        EXPECT_TRUE(read_result.is_ok());
         EXPECT_EQ(read_result.value(), 4);
     });
 }
@@ -125,11 +125,11 @@ TEST(UdpSocket, sendto_and_recvfrom) {
     connected_test([&](UdpSocket& sender, UdpSocket& receiver) {
         const auto send_result =
             sender.sendto(send_buf, 4, receiver.local_addr().value());
-        EXPECT_TRUE(send_result.has_value());
+        EXPECT_TRUE(send_result.is_ok());
         EXPECT_EQ(send_result.value(), 4);
 
         const auto recv_result = receiver.recvfrom(recv_buf, 10);
-        EXPECT_TRUE(recv_result.has_value());
+        EXPECT_TRUE(recv_result.is_ok());
         EXPECT_EQ(std::get<0>(recv_result.value()), 4);
         EXPECT_EQ(recv_buf, "buzz"s);
 
@@ -148,13 +148,13 @@ TEST(UdpSocket, writev_and_readv) {
         };
 
         const auto send_result = sender.writev(&iov, 1);
-        EXPECT_TRUE(send_result.has_value());
+        EXPECT_TRUE(send_result.is_ok());
         EXPECT_EQ(send_result.value(), 4);
 
         iov.iov_base = recv_buf;
         iov.iov_len = 10;
         const auto recv_result = receiver.readv(&iov, 1);
-        EXPECT_TRUE(recv_result.has_value());
+        EXPECT_TRUE(recv_result.is_ok());
         EXPECT_EQ(recv_result.value(), 4);
         EXPECT_EQ(recv_buf, "bizz"s);
     });
@@ -184,7 +184,7 @@ TEST(UdpSocket, sendmsg_and_recvmmsg) {
 
     connected_test([&](UdpSocket& sender, UdpSocket& receiver) {
         const auto send_result = sender.sendmsg(&msg);
-        EXPECT_TRUE(send_result.has_value());
+        EXPECT_TRUE(send_result.is_ok());
         EXPECT_EQ(send_result.value(), 4);
 
         EXPECT_EQ(sender.peer_addr().value(), receiver.local_addr().value());
@@ -197,7 +197,7 @@ TEST(UdpSocket, sendmsg_and_recvmmsg) {
         msg.msg_iovlen = 1;
 
         const auto recv_result = socket.recvmsg(&msg);
-        EXPECT_TRUE(recv_result.has_value());
+        EXPECT_TRUE(recv_result.is_ok());
         EXPECT_EQ(recv_buf, "bizz"s);
     });
 }
@@ -230,7 +230,7 @@ TEST(UdpSocket, sendmmsg_and_recvmmsg) {
 
     connected_test([&](UdpSocket& sender, UdpSocket& receiver) {
         const auto send_result = sender.sendmmsg(&mmsg, 1);
-        EXPECT_TRUE(send_result.has_value());
+        EXPECT_TRUE(send_result.is_ok());
         EXPECT_EQ(send_result.value(), 1);
         EXPECT_EQ(mmsg.msg_len, 4);
 
@@ -244,7 +244,7 @@ TEST(UdpSocket, sendmmsg_and_recvmmsg) {
         mmsg.msg_hdr.msg_iovlen = 1;
 
         const auto recv_result = socket.recvmmsg(&mmsg, 1);
-        EXPECT_TRUE(recv_result.has_value());
+        EXPECT_TRUE(recv_result.is_ok());
         EXPECT_EQ(recv_result.value(), 1);
         EXPECT_EQ(mmsg.msg_len, 4);
         EXPECT_EQ(recv_buf, "fizz"s);
@@ -253,20 +253,20 @@ TEST(UdpSocket, sendmmsg_and_recvmmsg) {
 
 TEST(UdpSocket, local_addr) {
     connected_test([](UdpSocket& sender, UdpSocket&) {
-        EXPECT_TRUE(sender.local_addr().has_value());
+        EXPECT_TRUE(sender.local_addr().is_ok());
         EXPECT_EQ(sender.local_addr().value().str(), "127.0.0.1:8080");
     });
 }
 
 TEST(UdpSocket, peer_addr) {
     connected_test([](UdpSocket& sender, UdpSocket& receiver) {
-        EXPECT_TRUE(sender.peer_addr().has_value());
+        EXPECT_TRUE(sender.peer_addr().is_ok());
         EXPECT_EQ(sender.peer_addr().value(), receiver.local_addr().value());
     });
 
     // // ipv6 not supported in ci
     // connected_test_v6([](UdpSocket& sender, UdpSocket& receiver) {
-    //     EXPECT_TRUE(sender.peer_addr().has_value());
+    //     EXPECT_TRUE(sender.peer_addr().is_ok());
     //     EXPECT_EQ(sender.peer_addr().value(), receiver.local_addr().value());
     // });
 }
@@ -279,7 +279,7 @@ TEST(UdpSocket, as_fd) {
 TEST(UdpSocket, take_error) {
     connected_test([](UdpSocket& sender, UdpSocket& receiver) {
         const auto err = sender.take_error();
-        EXPECT_TRUE(err.has_value());
+        EXPECT_TRUE(err.is_ok());
         EXPECT_EQ(err.value(), 0);
     });
 }

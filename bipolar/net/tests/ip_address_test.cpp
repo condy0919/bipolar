@@ -59,7 +59,7 @@ struct IPAddressTest : testing::TestWithParam<AddressData> {
 
         auto result = IPAddress::from_str(param.addr);
         if (!param.valid) {
-            EXPECT_FALSE(bool(result));
+            EXPECT_FALSE(result.is_ok());
             return;
         }
 
