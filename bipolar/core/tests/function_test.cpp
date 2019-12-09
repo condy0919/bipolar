@@ -155,3 +155,16 @@ TEST(Function, OverloadedFunctor) {
     Function<int(int, std::vector<int> const&)> const cvariant6const(cof);
     EXPECT_EQ(100 + 6 * 21, cvariant6const(21, {}));
 }
+
+TEST(Function, Compare) {
+    Function<int(int)> f;
+    EXPECT_EQ(f, nullptr);
+
+    Function<int(int)> add1;
+    add1 = [](int x) { return x + 1; };
+    EXPECT_NE(add1, nullptr);
+
+    f = std::move(add1);
+    EXPECT_NE(f, nullptr);
+    EXPECT_EQ(f(10), 11);
+}
