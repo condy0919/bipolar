@@ -30,7 +30,6 @@ public:
 
     /// Acquires the lock
     void lock() noexcept {
-        std::int_fast32_t val = 0;
         std::uint32_t wait_iters = 0;
 
         while (true) {
