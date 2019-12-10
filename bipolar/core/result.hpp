@@ -255,14 +255,8 @@ public:
     }
 
     /// Copy/Assigns if copyable/assignable
-    constexpr Result(const Result&)
-    // noexcept(
-    //     detail::all_of_v<std::is_nothrow_copy_constructible, T, E>)
-    = default;
-    constexpr Result& operator=(const Result&)
-    // noexcept(
-    //     detail::all_of_v<std::is_nothrow_copy_assignable, T, E>)
-    = default;
+    constexpr Result(const Result&) = default;
+    constexpr Result& operator=(const Result&) = default;
 
     /// Assigns a pending
     constexpr Result& operator=(Pending) noexcept {
