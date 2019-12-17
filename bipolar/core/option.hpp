@@ -6,7 +6,6 @@
 #ifndef BIPOLAR_CORE_OPTION_HPP_
 #define BIPOLAR_CORE_OPTION_HPP_
 
-#include <cassert>
 #include <cstdint>
 #include <functional>
 #include <new>
