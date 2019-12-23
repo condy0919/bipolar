@@ -69,17 +69,6 @@ public:
     /// IPv6Address v6;
     /// assert(v6.str() == "::");
     /// ```
-    ///
-    /// @TODO Checks if it's a clang (constexpr) bug
-    ///
-    /// ```
-    /// struct Foo {
-    ///     constexpr Foo(int, int) : Foo(0) {}
-    ///
-    ///     template <typename T>
-    ///     constexpr Foo(T) {} // inline function not defined
-    /// };
-    /// ```
     constexpr IPv6Address() noexcept : addr_(0, 0, 0, 0) {}
 
     /// Creates a new IPv6 address from the native type
