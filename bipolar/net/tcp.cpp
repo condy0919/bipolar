@@ -8,12 +8,14 @@
 
 #include <limits>
 
+#include "bipolar/core/assert.hpp"
 #include "bipolar/net/internal/native_to_socket_address.hpp"
 
 namespace bipolar {
 TcpStream::~TcpStream() noexcept {
-    // FIXME diagnose required
-    close();
+    const auto ret = close();
+    BIPOLAR_ASSERT(!ret.is_error(), "tcp stream closed with error: {}",
+                   ret.error());
 }
 
 Result<TcpStream, int> TcpStream::try_clone() noexcept {
@@ -171,8 +173,9 @@ Result<struct tcp_info, int> TcpStream::get_tcp_info() noexcept {
 }
 
 TcpListener::~TcpListener() noexcept {
-    // FIXME diagnose required
-    close();
+    const auto ret = close();
+    BIPOLAR_ASSERT(!ret.is_error(), "tcp listener closed with error: {}",
+                   ret.error());
 }
 
 Result<TcpListener, int> TcpListener::try_clone() noexcept {

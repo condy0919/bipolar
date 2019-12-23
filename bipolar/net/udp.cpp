@@ -5,12 +5,14 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
+#include "bipolar/core/assert.hpp"
 #include "bipolar/net/internal/native_to_socket_address.hpp"
 
 namespace bipolar {
 UdpSocket::~UdpSocket() noexcept {
-    // FIXME diagnose required
-    close();
+    const auto res = close();
+    BIPOLAR_ASSERT(!res.is_error(), "udp socket closed with error: {}",
+                   res.error());
 }
 
 Result<UdpSocket, int> UdpSocket::try_clone() noexcept {

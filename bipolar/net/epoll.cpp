@@ -2,11 +2,13 @@
 
 #include <unistd.h>
 
+#include "bipolar/core/assert.hpp"
+
 namespace bipolar {
 Epoll::~Epoll() noexcept {
     if (epfd_ != -1) {
-        // FIXME diagnose required
-        ::close(epfd_);
+        const int ret = ::close(epfd_);
+        BIPOLAR_ASSERT(ret == 0, "epoll fd closed with error: {}", ret);
     }
 }
 
