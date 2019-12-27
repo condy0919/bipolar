@@ -10,19 +10,16 @@
 
 ## Basic
 
-### Core
-
-### IO
-
-### Net
-
-### Futures
+- [core](bipolar/core/README.md)
+- [io](bipolar/io/README.md)
+- [futures](bipolar/futures/README.md)
+- [net](bipolar/net/README.md)
 
 ## How to start
 
 `bipolar` writes in C++17, a latest version of gcc/clang is recommended.
 
-[bazel](https://github.com/bazelbuild/bazel/) is required to build and run tests/benchmarks.
+[bazel](https://github.com/bazelbuild/bazel/) is required to build and run tests/benchmarks/examples.
 
 ### Build
 
@@ -43,13 +40,19 @@ bazel test //...
 Only tests:
 
 ```
-bazel test //... --test_tag_filters=-benchmark
+bazel test //... --test_tag_filters=-benchmark,-example
 ```
 
 Only benchmarks:
 
 ```
 bazel test //... --test_tag_filters=benchmark
+```
+
+Only examples:
+
+```
+bazel test //... --test_tag_filters=example
 ```
 
 ### Coverage
@@ -63,7 +66,6 @@ generates code coverage reports by [kcov][kcov-link].
 Checks `bazel-kcov` directory for code coverage.
 
 ## FAQ
-
 
 [github-ci-badge]: https://github.com/condy0919/bipolar/workflows/BIPOLAR%20CI/badge.svg
 [github-link]: https://github.com/condy0919/bipolar

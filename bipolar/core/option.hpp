@@ -204,6 +204,10 @@ Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
 /// }
 /// ```
 ///
+/// # Reference
+///
+/// [p0798](http://wg21.link/p0798)
+///
 template <typename T>
 class Option : public detail::OptionBase<T>,
                public internal::EnableCopyConstructor<
