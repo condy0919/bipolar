@@ -150,14 +150,8 @@ inline constexpr detail::None None{detail::None::Secret::TOKEN};
 /// See `Option::Option` for details
 template <typename T>
 inline constexpr Option<T>
-Some(T&& val) noexcept(std::is_nothrow_move_constructible_v<T>) {
-    return {std::move(val)};
-}
-
-template <typename T>
-inline constexpr Option<T>
-Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
-    return {val};
+Some(T&& val) noexcept(noexcept(Option<T>(std::declval<T>()))) {
+    return {std::forward<T>(val)};
 }
 
 /// Option
