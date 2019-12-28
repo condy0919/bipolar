@@ -12,6 +12,7 @@
 
 - [core](bipolar/core/README.md)
 - [io](bipolar/io/README.md)
+- [sync](bipolar/sync/README.md)
 - [futures](bipolar/futures/README.md)
 - [net](bipolar/net/README.md)
 
