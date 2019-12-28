@@ -66,24 +66,28 @@ namespace detail {
 /// - is_ok
 /// - is_error
 template <typename T>
+// NOLINTNEXTLINE(readability-identifier-naming)
 using is_result = is_instantiation_of<T, Result>;
 
 template <typename T>
 inline constexpr bool is_result_v = is_result<T>::value;
 
 template <typename T>
+// NOLINTNEXTLINE(readability-identifier-naming)
 using is_pending = std::is_same<T, Pending>;
 
 template <typename T>
 inline constexpr bool is_pending_v = is_pending<T>::value;
 
 template <typename T>
+// NOLINTNEXTLINE(readability-identifier-naming)
 using is_ok = is_instantiation_of<T, Ok>;
 
 template <typename T>
 inline constexpr bool is_ok_v = is_ok<T>::value;
 
 template <typename T>
+// NOLINTNEXTLINE(readability-identifier-naming)
 using is_error = is_instantiation_of<T, Err>;
 
 template <typename T>
@@ -91,6 +95,7 @@ inline constexpr bool is_error_v = is_error<T>::value;
 
 /// Checks whether all `T` meet the `Trait` or not
 template <template <typename> typename Trait, typename... Ts>
+// NOLINTNEXTLINE(readability-identifier-naming)
 using all_of = std::conjunction<Trait<Ts>...>;
 
 template <template <typename> typename Trait, typename... Ts>
@@ -144,8 +149,8 @@ class Result final {
     friend class Result;
 
 public:
-    using value_type = T;
-    using error_type = E;
+    using value_type = T; // NOLINT(readability-identifier-naming)
+    using error_type = E; // NOLINT(readability-identifier-naming)
 
     ////////////////////////////////////////////////////////////////////////////
     // Constructors & Assignments
@@ -768,7 +773,7 @@ public:
     /// Result<int, int> x = Ok(3);
     /// assert(!res.is_pending());
     /// ```
-    constexpr bool is_pending() const noexcept {
+    [[nodiscard]] constexpr bool is_pending() const noexcept {
         return sto_.index() == 0;
     }
 
@@ -781,7 +786,7 @@ public:
     /// Result<int, int> err_res = Err(3);
     /// assert(!res.is_ok());
     /// ```
-    constexpr bool is_ok() const noexcept {
+    [[nodiscard]] constexpr bool is_ok() const noexcept {
         return sto_.index() == 1;
     }
 
@@ -791,7 +796,7 @@ public:
     /// Result<int, int> err_res = Err(3);
     /// assert(err_res.has_error());
     /// ```
-    constexpr bool is_error() const noexcept {
+    [[nodiscard]] constexpr bool is_error() const noexcept {
         return sto_.index() == 2;
     }
 
