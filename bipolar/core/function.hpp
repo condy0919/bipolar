@@ -67,7 +67,7 @@ class Function;
 /// ```
 template <typename R, typename... Args>
 class Function<R(Args...)> {
-    using InsituType = void* [8];
+    using InsituType = void* [8]; // NOLINT(modernize-avoid-c-arrays)
 
     template <typename F>
     inline static constexpr bool
@@ -104,8 +104,8 @@ public:
     /// Function<int()> empty2(nullptr);
     /// assert(bool(empty2) == false);
     /// ```
-    constexpr Function() noexcept : vtbl_(&empty_vtable_), avail_(false), sto_() {}
-    constexpr Function(std::nullptr_t) noexcept : Function() {}
+    constexpr Function() noexcept = default;
+    constexpr Function(std::nullptr_t) noexcept {}
 
     /// `Function` is move-only
     Function(const Function&) = delete;
@@ -135,6 +135,8 @@ public:
                 !std::is_same_v<std::remove_cv_t<std::remove_reference_t<F>>,
                                 Function>,
             int> = 0>
+    // it has been checked by `std::enable_if_t`
+    // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     explicit Function(F&& f) noexcept(Insitu<F>)
         : Function(std::forward<F>(f), std::bool_constant<Insitu<F>>{}) {}
 
@@ -272,8 +274,8 @@ private:
     }
 
 private:
-    const Vtable* vtbl_;
-    bool avail_;
+    const Vtable* vtbl_ = &empty_vtable_;
+    bool avail_ = false;
     union {
         void* ptr_;
         std::aligned_union_t<0, InsituType> insitu_;
