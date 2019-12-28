@@ -59,6 +59,10 @@ Option<std::size_t> find(const std::vector<int>& vec, int target) {
 
 # [Void](void.hpp)
 
+The **regular** `Void` type is like the unit type in other functional languages.
+
+Hopes [it](http://wg21.link/p0146) goes well.
+
 # [Function](function.hpp)
 
 `Function` is a general-purpose polymorphic function wrapper.
