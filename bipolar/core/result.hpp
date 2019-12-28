@@ -118,11 +118,14 @@ public:
 ///
 /// # Brief
 ///
-/// `Result` is a type that represents either success Ok or failure
+/// `Result` is a type that represents success, failure or pending. And it can
+/// be used for returning and propagating errors.
 ///
-/// `Result` is the type used for returning and propagating errors. It's a
-/// `std::pair` like class with the variants, `Ok`, representing success and
-/// containing a value, and `Err`, representing error and containing an error.
+/// It's a `std::pair` like class with the variants:
+/// - `Ok`, representing success and containing a value
+/// - `Err`, representing error and containing an error
+/// - `Pending`, representing pending...
+///
 /// Functions return `Result` whenever errors are expected and recoverable.
 ///
 /// A simple function returning `Result` might be defined and used like so:
@@ -339,7 +342,7 @@ public:
     /// ```
     /// const Result<int, int> x(Ok(2));
     /// const auto res = x.map([](int x) { return x + 1; });
-    /// assert(res.has_value() && res.value() == 3);
+    /// assert(res.is_ok() && res.value() == 3);
     /// ```
     template <typename F, typename U = std::invoke_result_t<F, T>>
     constexpr Result<U, E> map(F&& f) const& {
@@ -353,6 +356,7 @@ public:
         case 2:
             return Err(std::get<2>(sto_));
         }
+        __builtin_unreachable();
     }
 
     template <typename F, typename U = std::invoke_result_t<F, T>>
@@ -429,7 +433,7 @@ public:
     ///
     /// const Result<int, int> y(Err(3));
     /// const auto res2 = y.map_err([](int x) { return x + 1; });
-    /// assert(res2.has_error() && res2.error() == 4);
+    /// assert(res2.is_error() && res2.error() == 4);
     /// ```
     template <typename F, typename U = std::invoke_result_t<F, E>>
     constexpr Result<T, U> map_err(F&& f) const& {
@@ -443,6 +447,7 @@ public:
         case 2:
             return Err(std::forward<F>(f)(std::get<2>(sto_)));
         }
+        __builtin_unreachable();
     }
 
     template <typename F, typename U = std::invoke_result_t<F, E>>
@@ -794,7 +799,7 @@ public:
     ///
     /// ```
     /// Result<int, int> err_res = Err(3);
-    /// assert(err_res.has_error());
+    /// assert(err_res.is_error());
     /// ```
     [[nodiscard]] constexpr bool is_error() const noexcept {
         return sto_.index() == 2;
@@ -913,7 +918,7 @@ inline constexpr bool operator!=(const Result<T, E>& lhs,
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<T>, int> = 0>
 inline constexpr bool operator==(const Result<T, E>& lhs, const Ok<T>& rhs) {
-    return lhs.has_value() && lhs.value() == rhs.value;
+    return lhs.is_ok() && lhs.value() == rhs.value;
 }
 
 template <typename T, typename E,
@@ -941,7 +946,7 @@ inline constexpr bool operator!=(const Ok<T>& lhs, const Result<T, E>& rhs) {
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<E>, int> = 0>
 inline constexpr bool operator==(const Result<T, E>& lhs, const Err<E>& rhs) {
-    return lhs.has_error() && lhs.error() == rhs.error;
+    return lhs.is_error() && lhs.error() == rhs.error;
 }
 
 template <typename T, typename E,

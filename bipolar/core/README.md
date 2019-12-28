@@ -57,11 +57,42 @@ Option<std::size_t> find(const std::vector<int>& vec, int target) {
 
 # [Result](result.hpp)
 
+`Result` is a type that represents success, failure or pending. And it can
+be used for returning and propagating errors.
+
+It's a `std::pair` like class with the variants:
+- `Ok`, representing success and containing a value
+- `Err`, representing error and containing an error
+- `Pending`, representing pending...
+
+Functions return `Result` whenever errors are expected and recoverable.
+
+A simple function returning `Result` might be defined and used like so:
+
+```cpp
+Result<int, const char*> parse(const char* s) {
+    if (std::strlen(s) < 3) {
+        return Err("string length is less than 3");
+    }
+    return Ok((s[0] - '0') * 100 + (s[1] - '0') * 10 + (s[2] - '0'));
+}
+```
+
+The caller can handle the `Result` chainingly
+
+```cpp
+assert(parse("123").map([](int x) { return x + 1; }).is_ok());
+
+assert(parse("12").map([](int x) { return x + 1; }).is_error());
+```
+
+// TODO(#31) more combinators
+
 # [Void](void.hpp)
 
 The **regular** `Void` type is like the unit type in other functional languages.
 
-Hopes [it](http://wg21.link/p0146) goes well.
+Hopes [p0146](http://wg21.link/p0146) goes well.
 
 # [Function](function.hpp)
 
@@ -120,16 +151,10 @@ a `FunctionRef`.
 
 See [p0792](http://wg21.link/p0792) for more information.
 
-# [ScopeGuard*](scope_guard.hpp)
-
-# [thread safety attributes](thread_safety.hpp)
 
 # Others
 
 - [Overload](overload.hpp) implements [p0051](http://wg21.link/p0051)
 - [byteorder utilities](byteorder.hpp) such as `htons`, `htonl`, etc...
 - [Movable](movable.hpp) is similar to `boost::noncopyable` but `MoveConstructible` and `MoveAssignable`
-- [Logger](logger.hpp)
-- [likely](likely.hpp)
-- [assume](assume.hpp)
-- [assert](assert.hpp)
+- [ScopeGuard*](scope_guard.hpp) drop-in replacement for `boost.scope_exit`
