@@ -31,6 +31,8 @@ class Function;
 /// of an empty `Function` results in `std::bad_function_call` exception being
 /// thrown.
 ///
+/// It has another name called [any_invocable](http://wg21.link/p0288).
+///
 /// NOTE:
 /// If your construct a `Function` with a `NULL` function pointer, bool(*this)
 /// still equal to true. That's an another difference with `std::function`
