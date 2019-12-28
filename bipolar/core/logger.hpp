@@ -121,12 +121,12 @@ public:
         "[%Y-%m-%d %T.%e][%t][%l][%n][%@] %v";
 
     /// Returns the log level
-    auto level() const {
+    [[nodiscard]] auto level() const {
         return logger_->level();
     }
 
     /// Returns the log level in `string_view` type
-    auto level_string_view() const {
+    [[nodiscard]] auto level_string_view() const {
         return spdlog::level::level_string_views[logger_->level()];
     }
 
@@ -139,7 +139,7 @@ public:
     void set_format(const std::string& fmt);
 
     /// Returns the logger's name
-    const std::string& name() const {
+    [[nodiscard]] const std::string& name() const {
         return logger_->name();
     }
 
@@ -187,15 +187,19 @@ public:
 #undef BIPOLAR_ALL_LOGGER_IDS
 } // namespace bipolar
 
-#define BIPOLAR_LOG(Logger, Level, ...)                                        \
+#define BIPOLAR_LOGGER_TYPE_CHECK(Logger)                                      \
     do {                                                                       \
         using LoggerType = std::remove_reference_t<decltype(Logger)>;          \
         static_assert(std::is_same_v<LoggerType, ::spdlog::logger>,            \
                       "Logger must be spdlog::logger type");                   \
-                                                                               \
+    } while (false)
+
+#define BIPOLAR_LOG(Logger, Level, ...)                                        \
+    do {                                                                       \
+        BIPOLAR_LOGGER_TYPE_CHECK(Logger);                                     \
         ::spdlog::source_loc src_loc(::bipolar::detail::basename(__FILE__),    \
                                      __LINE__, __func__);                      \
-        Logger.log(src_loc, ::spdlog::level::Level, __VA_ARGS__);              \
+        (Logger).log(src_loc, ::spdlog::level::Level, __VA_ARGS__);            \
     } while (false)
 
 #define BIPOLAR_LOG_TRACE(Logger, ...) BIPOLAR_LOG(Logger, trace, __VA_ARGS__)
@@ -208,11 +212,8 @@ public:
 
 #define BIPOLAR_LOG_FLUSH(Logger)                                              \
     do {                                                                       \
-        using LoggerType = std::remove_reference_t<decltype(Logger)>;          \
-        static_assert(std::is_same_v<LoggerType, ::spdlog::logger>,            \
-                      "Logger must be spdlog::logger type");                   \
-                                                                               \
-        Logger.flush();                                                        \
+        BIPOLAR_LOGGER_TYPE_CHECK(Logger);                                     \
+        (Logger).flush();                                                      \
     } while (false)
 
 #endif
