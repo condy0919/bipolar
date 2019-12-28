@@ -24,7 +24,7 @@
 //! assert(addk(10) == 23);
 //! ```
 //!
-//! [`Proposal`]: http://open-std.org/JTC1/SC22/WG21/docs/papers/2018/p0792r2.html
+//! [`Proposal`]: http://wg21.link/p0792
 //!
 
 #ifndef BIPOLAR_CORE_FUNCTION_REF_HPP_

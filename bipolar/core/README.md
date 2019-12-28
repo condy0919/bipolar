@@ -87,7 +87,7 @@ Function<int(int)> add1((int (*)(int))nullptr);
 assert(static_cast<bool>(add1));
 
 // UB, mostly segment fault
-assert(add1(-1) == 0);
+// assert(add1(-1) == 0);
 ```
 
 To get a benchmark result, run
@@ -99,9 +99,22 @@ bazel run //bipolar/core:function_benchmark -c opt
 |     Benchmark     |     Time      |    CPU    |   Iterations   |
 |-------------------|---------------|-----------|----------------|
 |std::function      |    2.67 ns    |  2.67 ns  |   261619176    |
-|bipolar::function  |    1.79 ns    |  1.79 ns  |   394390281    |
+|bipolar::Function  |    1.79 ns    |  1.79 ns  |   394390281    |
 
 # [FunctionRef](function_ref.hpp)
+
+`FunctionRef` is an efficient, type-erasing, non-owning reference to
+a callable. This is intended for use as the type of a function parameter
+that is not used after the function in question returns.
+
+This class does not own the callable, so it is not in general safe to store
+a `FunctionRef`.
+
+- To function pointer arguments, `FunctionRef` supports stateful function
+- To templated arguments, `FunctionRef` is easier to write and constrained
+- To `std::function`, `bipolar::Function` or other polymorphic function wrappers, `FunctionRef` has no allocations
+
+See [p0792](http://wg21.link/p0792) for more information.
 
 # [ScopeGuard*](scope_guard.hpp)
 

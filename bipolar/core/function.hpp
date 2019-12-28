@@ -35,7 +35,7 @@ class Function;
 ///
 /// NOTE:
 /// If your construct a `Function` with a `NULL` function pointer, bool(*this)
-/// still equal to true. That's an another difference with `std::function`
+/// still equal to true. That's an another difference with `std::function`.
 ///
 /// # Examples
 ///
