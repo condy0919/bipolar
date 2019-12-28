@@ -47,6 +47,8 @@ public:
                                   FunctionRef> &&
                       std::is_invocable_r_v<R, F, Args...>,
                   int> = 0>
+    // it has been checked by `std::enable_if_t`
+    // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     constexpr /*implicit*/ FunctionRef(F&& f) noexcept
         : obj_((void*)std::addressof(f)), call_(make_call<F>()) {}
 
@@ -76,10 +78,10 @@ public:
     }
 
 private:
-    using call_type = R (*)(void*, Args...);
+    using CallType = R (*)(void*, Args...);
 
     template <typename F>
-    constexpr auto make_call() noexcept {
+    constexpr CallType make_call() noexcept {
         return [](void* obj, Args... args) -> R {
             return std::invoke(*static_cast<std::add_pointer_t<F>>(obj),
                                std::forward<Args>(args)...);
@@ -87,7 +89,7 @@ private:
     }
 
     void* obj_;
-    call_type call_;
+    CallType call_;
 };
 
 template <typename T>
