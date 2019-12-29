@@ -72,7 +72,7 @@ A simple function returning `Result` might be defined and used like so:
 ```cpp
 Result<int, const char*> parse(const char* s) {
     if (std::strlen(s) < 3) {
-        return Err("string length is less than 3");
+        return Err<const char*>("string length is less than 3");
     }
     return Ok((s[0] - '0') * 100 + (s[1] - '0') * 10 + (s[2] - '0'));
 }
@@ -81,12 +81,42 @@ Result<int, const char*> parse(const char* s) {
 The caller can handle the `Result` chainingly
 
 ```cpp
-assert(parse("123").map([](int x) { return x + 1; }).is_ok());
+auto r1 = parse("123").map([](int x) { return x + 1; });
+assert(r1.is_ok());
+assert(r1.value() == 124);
 
-assert(parse("12").map([](int x) { return x + 1; }).is_error());
+auto r2 = parse("12").map([](int x) { return x + 1; });
+assert(r2.is_error());
+
+auto r3 = parse("12").map_err([](const char* s) {
+    return s[0];
+});
+assert(r3.is_error());
+assert(r3.error() == 's');
 ```
 
-// TODO(#31) more combinators
+Or use `and_then` and `or_else`
+
+```cpp
+auto r1 = parse("123").and_then([](int x) -> Result<int, const char*> {
+    return Ok(x + 1);
+});
+assert(r1.is_ok());
+assert(r1.value() == 124);
+
+auto r2 = parse("12").and_then([](int x) -> Result<int, const char*> {
+    return Ok(x + 1);
+});
+assert(r2.is_error());
+
+auto r3 = parse("12").or_else([](const char* s) -> Result<int, char> {
+    return s[0];
+});
+assert(r3.is_error());
+assert(r3.error() == 's');
+```
+
+Read the source code for more conbinators.
 
 # [Void](void.hpp)
 
