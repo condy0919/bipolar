@@ -8,15 +8,6 @@
 using namespace bipolar;
 using namespace std::literals;
 
-template <typename T, typename E>
-std::ostream& operator<<(std::ostream& os, const Result<T, E>& res) {
-    if (res.is_ok()) {
-        return os << "Ok(" << res.value() << ")";
-    } else {
-        return os << "Err(" << res.error() << ")";
-    }
-}
-
 struct NoDefault {
     NoDefault(int, int) {}
     char a, b, c;
@@ -174,10 +165,10 @@ TEST(Result, Unique) {
 
     ex = Err(-1);
     // empty->moved
-    ex = std::make_unique<int>(6);
+    ex = Ok(std::make_unique<int>(6));
     EXPECT_EQ(6, **ex);
     // full->moved
-    ex = std::make_unique<int>(7);
+    ex = Ok(std::make_unique<int>(7));
     EXPECT_EQ(7, **ex);
 
     // move it out by move construct
@@ -206,13 +197,13 @@ TEST(Result, Shared) {
     ex = Err(-1);
     EXPECT_EQ(1, ptr.use_count());
     // full->copied
-    ex = ptr;
+    ex = Ok(ptr);
     EXPECT_EQ(2, ptr.use_count());
     EXPECT_EQ(ptr.get(), ex->get());
     ex = Err(-1);
     EXPECT_EQ(1, ptr.use_count());
     // full->moved
-    ex = std::move(ptr);
+    ex = Ok(std::move(ptr));
     EXPECT_EQ(1, ex->use_count());
     EXPECT_EQ(nullptr, ptr.get());
     {

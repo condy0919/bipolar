@@ -169,16 +169,16 @@ public:
     /// const Result<int, int> x(Ok(42));
     /// assert(x.has_value());
     /// ```
-    template <bool C = true,
-              std::enable_if_t<C && std::is_move_constructible_v<T>, int> = 0>
-    constexpr /*implicit*/ Result(Ok<T>&& ok) noexcept(
-        std::is_nothrow_move_constructible_v<T>)
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<T, U&&>, int> = 0>
+    constexpr /*implicit*/ Result(Ok<U>&& ok) noexcept(
+        std::is_nothrow_constructible_v<T, U&&>)
         : sto_(std::in_place_index_t<1>{}, std::move(ok.value)) {}
 
-    template <bool C = true,
-              std::enable_if_t<C && std::is_copy_constructible_v<T>, int> = 0>
-    constexpr /*implicit*/ Result(const Ok<T>& ok) noexcept(
-        std::is_nothrow_copy_constructible_v<T>)
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<T, U>, int> = 0>
+    constexpr /*implicit*/ Result(const Ok<U>& ok) noexcept(
+        std::is_nothrow_constructible_v<T, U>)
         : sto_(std::in_place_index_t<1>{}, ok.value) {}
 
     /// Constructs from `Err` variant
@@ -187,16 +187,16 @@ public:
     /// const Result<int, int> x(Err(42));
     /// assert(x.has_error());
     /// ```
-    template <bool C = true,
-              std::enable_if_t<C && std::is_move_constructible_v<E>, int> = 0>
-    constexpr /*implicit*/ Result(Err<E>&& err) noexcept(
-        std::is_nothrow_move_constructible_v<E>)
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<E, U&&>, int> = 0>
+    constexpr /*implicit*/ Result(Err<U>&& err) noexcept(
+        std::is_nothrow_constructible_v<E, U&&>)
         : sto_(std::in_place_index_t<2>{}, std::move(err.error)) {}
 
-    template <bool C = true,
-              std::enable_if_t<C && std::is_copy_constructible_v<E>, int> = 0>
-    constexpr /*implicit*/ Result(const Err<E>& err) noexcept(
-        std::is_nothrow_copy_constructible_v<E>)
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<E, U>, int> = 0>
+    constexpr /*implicit*/ Result(const Err<U>& err) noexcept(
+        std::is_nothrow_constructible_v<E, U>)
         : sto_(std::in_place_index_t<2>{}, err.error) {}
 
     /// Constructs from other type `Result<X, Y>` where
@@ -273,27 +273,35 @@ public:
     }
 
     /// Assigns an ok
-    constexpr Result& operator=(const Ok<T>& ok) noexcept(
-        std::is_nothrow_copy_constructible_v<T>) {
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<T, U>, int> = 0>
+    constexpr Result&
+    operator=(const Ok<U>& ok) noexcept(std::is_nothrow_constructible_v<T, U>) {
         assign(ok);
         return *this;
     }
 
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<T, U&&>, int> = 0>
     constexpr Result&
-    operator=(Ok<T>&& ok) noexcept(std::is_nothrow_move_constructible_v<T>) {
+    operator=(Ok<U>&& ok) noexcept(std::is_nothrow_constructible_v<T, U&&>) {
         assign(std::move(ok));
         return *this;
     }
 
     /// Assigns an error
-    constexpr Result& operator=(const Err<E>& err) noexcept(
-        std::is_nothrow_copy_constructible_v<E>) {
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<E, U>, int> = 0>
+    constexpr Result& operator=(const Err<U>& err) noexcept(
+        std::is_nothrow_constructible_v<E, U>) {
         assign(err);
         return *this;
     }
 
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<E, U&&>, int> = 0>
     constexpr Result&
-    operator=(Err<E>&& err) noexcept(std::is_nothrow_copy_constructible_v<E>) {
+    operator=(Err<U>&& err) noexcept(std::is_nothrow_constructible_v<E, U&&>) {
         assign(std::move(err));
         return *this;
     }
@@ -304,24 +312,32 @@ public:
     }
 
     /// Assigns with `Ok` type
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<T, U>, int> = 0>
     constexpr void
-    assign(const Ok<T>& ok) noexcept(std::is_nothrow_copy_constructible_v<T>) {
+    assign(const Ok<U>& ok) noexcept(std::is_nothrow_constructible_v<T, U>) {
         sto_.template emplace<1>(ok.value);
     }
 
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<T, U&&>, int> = 0>
     constexpr void
-    assign(Ok<T>&& ok) noexcept(std::is_nothrow_move_constructible_v<T>) {
+    assign(Ok<U>&& ok) noexcept(std::is_nothrow_constructible_v<T, U&&>) {
         sto_.template emplace<1>(std::move(ok.value));
     }
 
     /// Assigns with `Err` type
-    constexpr void assign(const Err<E>& err) noexcept(
-        std::is_nothrow_copy_constructible_v<E>) {
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<E, U>, int> = 0>
+    constexpr void
+    assign(const Err<U>& err) noexcept(std::is_nothrow_constructible_v<E, U>) {
         sto_.template emplace<2>(err.error);
     }
 
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<E, U&&>, int> = 0>
     constexpr void
-    assign(Err<E>&& err) noexcept(std::is_nothrow_move_constructible_v<E>) {
+    assign(Err<U>&& err) noexcept(std::is_nothrow_constructible_v<E, U&&>) {
         sto_.template emplace<2>(std::move(err.error));
     }
 
