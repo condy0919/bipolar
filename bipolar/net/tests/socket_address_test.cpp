@@ -65,3 +65,8 @@ TEST(SocketAddress, from_str) {
     EXPECT_EQ(r10.value().addr(), IPAddress(IPv6Address()));
     EXPECT_EQ(r10.value().port(), hton(static_cast<std::uint16_t>(8086)));
 }
+
+TEST(SocketAddress, str) {
+    SocketAddress sa(IPAddress{}, 0);
+    EXPECT_EQ(sa.str(), "");
+}

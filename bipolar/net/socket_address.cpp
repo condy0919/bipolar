@@ -64,11 +64,14 @@ std::string SocketAddress::str() const {
     if (addr_.is_ipv4()) {
         ret.assign(addr_.str());
         ret.append(1, ':');
-    } else {
+    } else if (addr_.is_ipv6()) {
         ret.append(1, '[');
         ret.append(addr_.str());
         ret.append(1, ']');
         ret.append(1, ':');
+    } else {
+        // empty
+        return "";
     }
 
     char buf[6] = "";
