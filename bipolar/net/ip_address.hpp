@@ -18,6 +18,7 @@
 
 #include "bipolar/core/byteorder.hpp"
 #include "bipolar/core/option.hpp"
+#include "bipolar/core/overload.hpp"
 #include "bipolar/core/result.hpp"
 
 namespace bipolar {
@@ -557,6 +558,9 @@ inline constexpr bool operator>=(const IPv4Address& lhs,
 /// ```
 class IPAddress {
 public:
+    /// Creates an `IPAddress` with an unspecified protocol
+    constexpr IPAddress() noexcept : addr_(std::monostate{}) {}
+
     /// Creates an `IPAddress` from `IPv4Address`
     ///
     /// # Examples
@@ -609,6 +613,18 @@ public:
         return *this;
     }
 
+    /// Resets to the unspecified protocol state
+    ///
+    /// IPv{4,6} are nothrown destructible that guarantees no exceptions thrown
+    /// NOLINTNEXTLINE(bugprone-exception-escape)
+    void reset() noexcept {
+        static_assert(std::is_nothrow_destructible_v<IPv6Address>);
+        static_assert(std::is_nothrow_destructible_v<IPv4Address>);
+
+        family_ = AF_UNSPEC;
+        addr_.emplace<std::monostate>();
+    }
+
     /// Creates a new IPAddress from a `string_view`
     ///
     /// # Note
@@ -632,6 +648,11 @@ public:
         return family_;
     }
 
+    /// Returns `true` if this address's protocol is unspecified
+    [[nodiscard]] constexpr bool is_empty() const noexcept {
+        return family_ == AF_UNSPEC;
+    }
+
     /// Returns `true` if this address is an IPv4 address
     [[nodiscard]] constexpr bool is_ipv4() const noexcept {
         return family_ == AF_INET;
@@ -643,26 +664,46 @@ public:
     }
 
     /// Visits address
+    ///
+    /// `F` must be invocable for `IPv4Address`, `IPv6Address` and
+    /// `std::monostate` types.
+    ///
+    /// Uses the `Overload` trick to handle it.
     template <typename F>
     constexpr auto visit(F&& f) const {
-        return is_ipv4() ? std::forward<F>(f)(as_ipv4())
-                         : std::forward<F>(f)(as_ipv6());
+        switch (family()) {
+        case AF_INET:
+            return std::forward<F>(f)(as_ipv4());
+
+        case AF_INET6:
+            return std::forward<F>(f)(as_ipv6());
+
+        case AF_UNSPEC:
+            return std::forward<F>(f)(std::monostate{});
+        }
+        __builtin_unreachable();
     }
 
     /// Returns `true` for the special unspecified address
     ///
     /// see `IPv4Address::is_unspecified` and `IPv6Address::is_unspecified`
     /// for details
-    constexpr bool is_unspecified() const {
-        return visit([](const auto& var) { return var.is_unspecified(); });
+    [[nodiscard]] constexpr bool is_unspecified() const {
+        return visit(Overload{
+            [](const IPv4Address& addr) { return addr.is_unspecified(); },
+            [](const IPv6Address& addr) { return addr.is_unspecified(); },
+            [](std::monostate) { return false; }});
     }
 
     /// Returns `true` for the loopback address
     ///
     /// see `IPv4Address::is_loopback` and `IPv6Address::is_loopback`
     /// for details
-    constexpr bool is_loopback() const {
-        return visit([](const auto& var) { return var.is_loopback(); });
+    [[nodiscard]] constexpr bool is_loopback() const {
+        return visit(
+            Overload{[](const IPv4Address& addr) { return addr.is_loopback(); },
+                     [](const IPv6Address& addr) { return addr.is_loopback(); },
+                     [](std::monostate) { return false; }});
     }
 
     /// Casts the variant to IPv4Address type
@@ -700,17 +741,19 @@ public:
             auto& sin = reinterpret_cast<struct sockaddr_in&>(addr);
             sin.sin_addr = as_ipv4().native();
             sin.sin_port = port;
-        } else {
+        } else if (is_ipv6()) {
             auto& sin6 = reinterpret_cast<struct sockaddr_in6&>(addr);
             sin6.sin6_addr = as_ipv6().native();
             sin6.sin6_port = port;
+        } else {
+            // AF_UNSPEC, nothing to do
         }
         return addr;
     }
 
 private:
-    int family_;
-    std::variant<IPv4Address, IPv6Address> addr_;
+    int family_ = AF_UNSPEC;
+    std::variant<std::monostate, IPv4Address, IPv6Address> addr_;
 };
 
 /// Compares `IPAddress` with other `IPAddress`

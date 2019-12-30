@@ -15,6 +15,9 @@ TEST(IPAddress, Assignment) {
 
     addr = IPv6Address(0, 0, 0, 0, 0, 0, 0, 0);
     EXPECT_EQ(addr.str(), "::");
+
+    addr.reset();
+    EXPECT_EQ(addr.str(), "");
 }
 
 TEST(IPAddress, Ordering) {
@@ -130,6 +133,20 @@ INSTANTIATE_TEST_CASE_P(IPAddress, IPAddressTest,
 
 TEST_P(IPAddressTest, All) {
     expect();
+}
+
+TEST(IPAddress, empty) {
+    IPAddress empty;
+    EXPECT_TRUE(empty.is_empty());
+    EXPECT_EQ(empty.str(), "");
+
+    IPAddress addr{IPv4Address()};
+    EXPECT_FALSE(addr.is_empty());
+    EXPECT_EQ(addr.str(), "0.0.0.0");
+
+    addr.reset();
+    EXPECT_TRUE(addr.is_empty());
+    EXPECT_EQ(addr.str(), "");
 }
 
 TEST(IPv4Address, to_long) {
