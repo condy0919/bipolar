@@ -1,5 +1,7 @@
 #include "bipolar/net/udp.hpp"
 
+#include <cstdint>
+
 #include <gtest/gtest.h>
 
 #include "bipolar/core/byteorder.hpp"
@@ -85,6 +87,41 @@ TEST(UdpSocket, connect_failed) {
         auto result = sender.connect(SocketAddress(IPv4Address(1, 1, 1, 1), 0));
         EXPECT_TRUE(result.is_error());
         EXPECT_EQ(result.error(), EINVAL);
+    });
+}
+
+TEST(UdpSocket, dissolve) {
+    connected_test([](UdpSocket& sender, UdpSocket& receiver) {
+        const auto localhost = IPv4Address(127, 0, 0, 1);
+
+        // sender bound to 127.0.0.1:8080
+        // receiver bound to 127.0.0.1:8081
+        auto association =
+            UdpSocket::bind(SocketAddress(localhost, 8082))
+                .value();
+
+        auto result = association.sendto(
+            "test", 4,
+            SocketAddress(localhost, hton(static_cast<std::uint16_t>(8080))));
+        EXPECT_TRUE(result.is_ok());
+        EXPECT_EQ(result.value(), 4);
+
+        char buf[10];
+        auto recv_result = sender.recv(buf, sizeof(buf));
+        EXPECT_TRUE(recv_result.is_error());
+        EXPECT_EQ(recv_result.error(), EAGAIN);
+
+        sender.dissolve();
+        result = association.sendto(
+            "test", 4,
+            SocketAddress(localhost, hton(static_cast<std::uint16_t>(8080))));
+        EXPECT_TRUE(result.is_ok());
+        EXPECT_EQ(result.value(), 4);
+
+        recv_result = sender.recv(buf, sizeof(buf));
+        EXPECT_TRUE(recv_result.is_ok());
+        EXPECT_EQ(recv_result.value(), 4);
+        EXPECT_EQ(std::memcmp(buf, "test", 4), 0);
     });
 }
 

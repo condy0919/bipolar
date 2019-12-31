@@ -62,6 +62,17 @@ Result<Void, int> UdpSocket::connect(const SocketAddress& sa) noexcept {
     return Ok(Void{});
 }
 
+Result<Void, int> UdpSocket::dissolve() noexcept {
+    struct sockaddr sa = {
+        .sa_family = AF_UNSPEC,
+    };
+    const int ret = ::connect(fd_, &sa, sizeof(sa));
+    if (ret == -1) {
+        return Err(errno);
+    }
+    return Ok(Void{});
+}
+
 Result<Void, int> UdpSocket::close() noexcept {
     if (fd_ != -1) {
         const int copy_fd = std::exchange(fd_, -1);
@@ -145,9 +156,8 @@ UdpSocket::recvfrom(void* buf, std::size_t len, int flags) noexcept {
     }
 
     return internal::native_addr_to_socket_address(&addr, addr_len)
-        .map([ret](SocketAddress&& sa) {
-            return std::make_tuple(static_cast<std::size_t>(ret),
-                                   std::move(sa));
+        .map([ret](SocketAddress sa) {
+            return std::make_tuple(static_cast<std::size_t>(ret), sa);
         });
 }
 

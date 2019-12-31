@@ -115,6 +115,11 @@ public:
     /// `man 2 connect` for more information.
     Result<Void, int> connect(const SocketAddress& sa) noexcept;
 
+    /// Dissolves the association created by `connect`.
+    ///
+    /// `man 2 connect` for more information.
+    Result<Void, int> dissolve() noexcept;
+
     /// Closes the socket
     Result<Void, int> close() noexcept;
 
@@ -238,7 +243,7 @@ public:
     /// NOTE:
     /// The returned fd may be invalidated after some methods such as
     /// `operator=`
-    int as_fd() const noexcept {
+    [[nodiscard]] int as_fd() const noexcept {
         return fd_;
     }
 
