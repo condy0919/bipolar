@@ -8,6 +8,8 @@
 
 #include <chrono>
 #include <cstdint>
+#include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -123,18 +125,44 @@ public:
                            std::chrono::milliseconds timeout) noexcept;
 
     /// Adds `fd` to the interest list and associates the settings specified
-    /// via `data` and `interests` with the internal file linked to `fd`
-    Result<Void, int> add(int fd, void* data, std::uint32_t interests) noexcept;
+    /// via `data` and `interests` with the internal file linked to `fd` where
+    /// `data` can be one of following types:
+    /// - `void*` or other pointer types can be implicitly cast to `void*`
+    /// - `int`
+    /// - `std::uint32_t`
+    /// - `std::uint64_t`
+    template <typename T,
+              std::enable_if_t<std::is_convertible_v<T, void*> ||
+                                   std::is_same_v<T, int> ||
+                                   std::is_same_v<T, std::uint32_t> ||
+                                   std::is_same_v<T, std::uint64_t>,
+                               int> = 0>
+    Result<Void, int> add(int fd, T data, std::uint32_t interests) noexcept {
+        return epoll_control(EPOLL_CTL_ADD, fd, data, interests);
+    }
 
     /// Changes the settings associated with `fd` in the interest list to
-    /// the new settings specified via `data` and `interests` arguments.
-    Result<Void, int> mod(int fd, void* data, std::uint32_t interests) noexcept;
+    /// the new settings specified via `data` and `interests` arguments where
+    /// `data can be one of the following types:
+    /// - `void*` or other pointer types can be implicitly cast to `void*`
+    /// - `int`
+    /// - `std::uint32_t`
+    /// - `std::uint64_t`
+    template <typename T,
+              std::enable_if_t<std::is_convertible_v<T, void*> ||
+                                   std::is_same_v<T, int> ||
+                                   std::is_same_v<T, std::uint32_t> ||
+                                   std::is_same_v<T, std::uint64_t>,
+                               int> = 0>
+    Result<Void, int> mod(int fd, T data, std::uint32_t interests) noexcept {
+        return epoll_control(EPOLL_CTL_MOD, fd, data, interests);
+    }
 
     /// Removes the target file descriptor `fd` from the interest list
     Result<Void, int> del(int fd) noexcept;
 
     /// Returns the underlying file descriptor
-    int as_fd() const noexcept {
+    [[nodiscard]] int as_fd() const noexcept {
         return epfd_;
     }
 
@@ -144,8 +172,42 @@ public:
     }
 
 private:
+    template <typename T>
+    Result<Void, int> epoll_control(int op, int fd, T data,
+                                    std::uint32_t interests) noexcept {
+        struct epoll_event ev = {
+            .events = interests,
+        };
+
+        if constexpr (std::is_convertible_v<T, void*>) {
+            ev.data.ptr = data;
+        } else if (std::is_same_v<T, int>) {
+            ev.data.fd = data;
+        } else if (std::is_same_v<T, std::uint32_t>) {
+            ev.data.u32 = data;
+        } else if (std::is_same_v<T, std::uint64_t>) {
+            ev.data.u64 = data;
+        }
+
+        const int ret = ::epoll_ctl(epfd_, op, fd, &ev);
+        if (ret == -1) {
+            return Err(errno);
+        }
+        return Ok(Void{});
+    }
+
+private:
     int epfd_;
 };
+
+/// stringify epoll interests
+///
+/// # Examples
+///
+/// ```
+/// assert(stringify_interests(EPOLLIN | EPOLLOUT) == "IN OUT ");
+/// ```
+std::string stringify_interests(int interests);
 } // namespace bipolar
 
 #endif

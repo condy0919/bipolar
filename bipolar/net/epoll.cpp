@@ -2,6 +2,9 @@
 
 #include <unistd.h>
 
+#include <array>
+#include <tuple>
+
 #include "bipolar/core/assert.hpp"
 
 namespace bipolar {
@@ -40,37 +43,37 @@ Result<Void, int> Epoll::poll(std::vector<struct epoll_event>& events,
     return Ok(Void{});
 }
 
-Result<Void, int> Epoll::add(int fd, void* data,
-                             std::uint32_t interests) noexcept {
-    struct epoll_event ev;
-    ev.events = interests;
-    ev.data.ptr = data;
-
-    const int ret = ::epoll_ctl(epfd_, EPOLL_CTL_ADD, fd, &ev);
-    if (ret == -1) {
-        return Err(errno);
-    }
-    return Ok(Void{});
-}
-
-Result<Void, int> Epoll::mod(int fd, void* data,
-                             std::uint32_t interests) noexcept {
-    struct epoll_event ev;
-    ev.events = interests;
-    ev.data.ptr = data;
-
-    const int ret = ::epoll_ctl(epfd_, EPOLL_CTL_MOD, fd, &ev);
-    if (ret == -1) {
-        return Err(errno);
-    }
-    return Ok(Void{});
-}
-
 Result<Void, int> Epoll::del(int fd) noexcept {
     const int ret = ::epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
     if (ret == -1) {
         return Err(errno);
     }
     return Ok(Void{});
+}
+
+std::string stringify_interests(int interests) {
+    constexpr std::array<std::tuple<int, const char*>, 6> opt_tbl = {{
+        {EPOLLIN, "IN"},
+        {EPOLLOUT, "OUT"},
+        {EPOLLRDHUP, "RDHUP"},
+        {EPOLLPRI, "PRI"},
+        {EPOLLERR, "ERR"},
+        {EPOLLHUP, "HUP"},
+    }};
+
+    std::string ret;
+
+    // IN OUT RDHUP PRI ERR HUP
+    // 2 + 3 + 5 + 3 + 3 + 3 = 19
+    // round (19 + additional 6 whitespaces) up to 32
+    ret.reserve(32);
+    for (auto opt : opt_tbl) {
+        if (interests & std::get<0>(opt)) {
+            ret.append(std::get<1>(opt));
+            ret.append(1, ' ');
+        }
+    }
+
+    return ret;
 }
 } // namespace bipolar
