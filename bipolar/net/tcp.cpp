@@ -250,8 +250,8 @@ TcpListener::accept() noexcept {
         return Err(errno);
     }
     return internal::native_addr_to_socket_address(&addr, addr_len)
-        .map([conn](SocketAddress&& sa) {
-            return std::make_tuple(TcpStream(conn), std::move(sa));
+        .map([conn](SocketAddress sa) {
+            return std::make_tuple(TcpStream(conn), sa);
         });
 }
 

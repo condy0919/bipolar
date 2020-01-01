@@ -193,7 +193,7 @@ public:
     /// NOTE:
     /// The returned fd may be invalidated after some methods such as
     /// `operator=`
-    int as_fd() const noexcept {
+    [[nodiscard]] int as_fd() const noexcept {
         return fd_;
     }
 
@@ -227,7 +227,7 @@ public:
 
     /// Close if it's valid.
     ///
-    /// A stream is valid only if the numeric valud of fd is larger than or
+    /// A stream is valid only if the numeric value of fd is larger than or
     /// equal to 0.
     ///
     /// Use -1 as an invalid state internally.
@@ -282,7 +282,7 @@ public:
     /// NOTE:
     /// The returned fd may be invalidated after some methods such as
     /// `operator=`
-    int as_fd() const noexcept {
+    [[nodiscard]] int as_fd() const noexcept {
         return fd_;
     }
 
