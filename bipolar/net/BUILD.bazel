@@ -38,6 +38,7 @@ cc_test(
     srcs = [
         "tests/ip_address_test.cpp",
         "tests/socket_address_test.cpp",
+        "tests/tcp_test.cpp",
         "tests/udp_test.cpp",
     ],
     copts = BIPOLAR_TEST_COPTS,
