@@ -42,7 +42,7 @@ jobs:
 
       - name: Installing bazel
         run: |
-          bazel_version=1.2.1
+          bazel_version=2.0.0
           curl -OL https://github.com/bazelbuild/bazel/releases/download/${bazel_version}/bazel-${bazel_version}-installer-linux-x86_64.sh
           chmod +x bazel-${bazel_version}-installer-linux-x86_64.sh
           ./bazel-${bazel_version}-installer-linux-x86_64.sh
