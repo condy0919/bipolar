@@ -5,6 +5,7 @@
 #define BIPOLAR_SYNC_SPINLOCK_HPP_
 
 #include <atomic>
+#include <cassert>
 #include <cstdint>
 
 #include "bipolar/core/thread_safety.hpp"
@@ -16,20 +17,22 @@ namespace bipolar {
 ///
 /// `xchg` is cheaper than `cmpxchg` on most platforms.
 ///
-/// See [it] for details.
-///
-/// [it]: https://www.agner.org/optimize/instruction_tables.pdf
+/// See [it](https://www.agner.org/optimize/instruction_tables.pdf) for details.
 class BIPOLAR_CAPABILITY("mutex") SpinLock final : public boost::noncopyable {
 public:
     constexpr SpinLock() noexcept : locked_(0) {}
 
+    ~SpinLock() noexcept {
+        assert(locked_ == 0);
+    }
+
     /// Trys to acquire the lock
-    bool try_lock() noexcept {
+    bool try_lock() noexcept BIPOLAR_TRY_ACQUIRE() {
         return locked_.exchange(1, std::memory_order_acquire) == 0;
     }
 
     /// Acquires the lock
-    void lock() noexcept {
+    void lock() noexcept BIPOLAR_ACQUIRE() {
         std::uint32_t wait_iters = 0;
 
         while (true) {
@@ -52,7 +55,7 @@ public:
     }
 
     /// Releases the lock
-    void unlock() noexcept {
+    void unlock() noexcept BIPOLAR_RELEASE() {
         locked_.store(0, std::memory_order_release);
     }
 
