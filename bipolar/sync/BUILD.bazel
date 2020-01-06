@@ -14,6 +14,7 @@ cc_library(
     srcs = [
     ],
     hdrs = [
+        "barrier.hpp",
         "spinlock.hpp",
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
@@ -21,5 +22,19 @@ cc_library(
     deps = [
         "//bipolar/core",
         "@boost//:noncopyable",
+    ],
+)
+
+cc_test(
+    name = "sync_test",
+    srcs = [
+        "tests/barrier_test.cpp",
+        "tests/spinlock_test.cpp",
+    ],
+    copts = BIPOLAR_TEST_COPTS,
+    linkopts = BIPOLAR_DEFAULT_LINKOPTS,
+    deps = [
+        ":sync",
+        "@gtest//:gtest_main",
     ],
 )
