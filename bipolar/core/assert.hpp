@@ -17,7 +17,7 @@
         }                                                                      \
     } while (false)
 #else
-#define BIPOLAR_ASSERT(expr, msg) ((void)(expr))
+#define BIPOLAR_ASSERT(expr, ...) ((void)(expr))
 #endif
 
 #endif
