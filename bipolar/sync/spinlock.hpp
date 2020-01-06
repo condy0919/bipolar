@@ -27,7 +27,7 @@ public:
     }
 
     /// Trys to acquire the lock
-    bool try_lock() noexcept BIPOLAR_TRY_ACQUIRE() {
+    bool try_lock() noexcept BIPOLAR_TRY_ACQUIRE(true) {
         return locked_.exchange(1, std::memory_order_acquire) == 0;
     }
 
