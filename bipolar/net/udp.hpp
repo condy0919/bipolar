@@ -241,10 +241,16 @@ public:
     /// Returns the underlying file descriptor.
     ///
     /// NOTE:
+    ///
     /// The returned fd may be invalidated after some methods such as
     /// `operator=`
     [[nodiscard]] int as_fd() const noexcept {
         return fd_;
+    }
+
+    /// Returns the underlying file descriptor and leaving it invalid.
+    [[nodiscard]] int into_fd() noexcept {
+        return std::exchange(fd_, -1);
     }
 
     /// Swaps

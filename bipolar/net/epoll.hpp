@@ -24,6 +24,7 @@ namespace bipolar {
 ///
 /// Epoll, from a user-space perspective, can be considered as a container of
 /// two lists:
+///
 /// - the interest list monitoring the registered file descriptors
 /// - the ready list containing the references of ready file descriptors
 ///
@@ -69,6 +70,7 @@ public:
     /// Waits for events on the epoll instance.
     ///
     /// This function will block until either:
+    ///
     /// - a file descriptor delivers an event
     /// - the call is interrupted by a signal handler
     /// - the timeout expires
@@ -127,6 +129,7 @@ public:
     /// Adds `fd` to the interest list and associates the settings specified
     /// via `data` and `interests` with the internal file linked to `fd` where
     /// `data` can be one of following types:
+    ///
     /// - `void*` or other pointer types can be implicitly cast to `void*`
     /// - `int`
     /// - `std::uint32_t`
@@ -144,6 +147,7 @@ public:
     /// Changes the settings associated with `fd` in the interest list to
     /// the new settings specified via `data` and `interests` arguments where
     /// `data can be one of the following types:
+    ///
     /// - `void*` or other pointer types can be implicitly cast to `void*`
     /// - `int`
     /// - `std::uint32_t`

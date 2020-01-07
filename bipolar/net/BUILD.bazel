@@ -36,6 +36,7 @@ cc_library(
 cc_test(
     name = "net_test",
     srcs = [
+        "tests/epoll_test.cpp",
         "tests/ip_address_test.cpp",
         "tests/socket_address_test.cpp",
         "tests/tcp_test.cpp",
@@ -45,6 +46,7 @@ cc_test(
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
     deps = [
         ":net",
+        "//bipolar/sync",
         "@gtest//:gtest_main",
     ],
 )

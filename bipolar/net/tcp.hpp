@@ -191,10 +191,16 @@ public:
     /// Returns the underlying file descriptor.
     ///
     /// NOTE:
+    ///
     /// The returned fd may be invalidated after some methods such as
     /// `operator=`
     [[nodiscard]] int as_fd() const noexcept {
         return fd_;
+    }
+
+    /// Returns the underlying file descriptor and leaving it invalid.
+    [[nodiscard]] int into_fd() noexcept {
+        return std::exchange(fd_, -1);
     }
 
     /// Swaps
@@ -255,6 +261,7 @@ public:
     /// `man 2 bind/listen` for more information.
     ///
     /// NOTE:
+    ///
     /// 1. `SO_REUSEADDR` and `SO_REUSEPORT` are set for convenience
     /// 2. `listen` with a large backlog value which is equal to
     ///    `std::numeric_limits<int>::max()`
@@ -280,10 +287,16 @@ public:
     /// Returns the underlying file descriptor.
     ///
     /// NOTE:
+    ///
     /// The returned fd may be invalidated after some methods such as
     /// `operator=`
     [[nodiscard]] int as_fd() const noexcept {
         return fd_;
+    }
+
+    /// Returns the underlying file descriptor and leaving it invalid.
+    [[nodiscard]] int into_fd() noexcept {
+        return std::exchange(fd_, -1);
     }
 
     /// Swaps
