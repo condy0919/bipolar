@@ -6,7 +6,6 @@
 #ifndef BIPOLAR_CORE_OPTION_HPP_
 #define BIPOLAR_CORE_OPTION_HPP_
 
-#include <cassert>
 #include <cstdint>
 #include <functional>
 #include <new>
@@ -39,6 +38,7 @@ template <typename T>
 struct is_option_impl<Option<T>> : std::true_type {};
 
 template <typename T>
+// NOLINTNEXTLINE(readability-identifier-naming)
 using is_option = is_option_impl<std::decay_t<T>>;
 
 template <typename T>
@@ -70,6 +70,7 @@ union OptionNonTrivialStorage {
     constexpr OptionNonTrivialStorage(Args&&... args)
         : value(std::forward<Args>(args)...) {}
 
+    // NOLINTNEXTLINE(modernize-use-equals-default)
     ~OptionNonTrivialStorage() {}
 };
 
@@ -79,7 +80,7 @@ class OptionBase;
 template <typename T>
 class OptionBase<T, true> {
 public:
-    constexpr OptionBase() : has_value_(false) {}
+    constexpr OptionBase() = default;
 
     constexpr explicit OptionBase(T&& val)
         : has_value_(true), sto_(std::move(val)) {}
@@ -97,14 +98,14 @@ public:
     }
 
 protected:
-    bool has_value_;
+    bool has_value_ = false;
     OptionTrivialStorage<T> sto_;
 };
 
 template <typename T>
 class OptionBase<T, false> {
 public:
-    constexpr OptionBase() : has_value_(false) {}
+    constexpr OptionBase() = default;
 
     constexpr explicit OptionBase(T&& val)
         : has_value_(true), sto_(std::move(val)) {}
@@ -127,7 +128,7 @@ public:
     }
 
 protected:
-    bool has_value_;
+    bool has_value_ = false;
     OptionNonTrivialStorage<T> sto_;
 };
 } // namespace detail
@@ -151,14 +152,8 @@ inline constexpr detail::None None{detail::None::Secret::TOKEN};
 /// See `Option::Option` for details
 template <typename T>
 inline constexpr Option<T>
-Some(T&& val) noexcept(std::is_nothrow_move_constructible_v<T>) {
-    return {std::move(val)};
-}
-
-template <typename T>
-inline constexpr Option<T>
-Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
-    return {val};
+Some(T&& val) noexcept(noexcept(Option<T>(std::declval<T>()))) {
+    return {std::forward<T>(val)};
 }
 
 /// Option
@@ -205,6 +200,10 @@ Some(const T& val) noexcept(std::is_nothrow_copy_constructible_v<T>) {
 /// }
 /// ```
 ///
+/// # Reference
+///
+/// [p0798](http://wg21.link/p0798)
+///
 template <typename T>
 class Option : public detail::OptionBase<T>,
                public internal::EnableCopyConstructor<
@@ -234,6 +233,7 @@ class Option : public detail::OptionBase<T>,
     using Base = detail::OptionBase<T>;
 
 public:
+    // NOLINTNEXTLINE(readability-identifier-naming)
     using value_type = T;
 
     /// No value
@@ -749,7 +749,7 @@ public:
     T* get_pointer() && = delete;
 
     /// Checks whether the option is `Some` or not
-    constexpr bool has_value() const noexcept {
+    [[nodiscard]] constexpr bool has_value() const noexcept {
         return Base::has_value_;
     }
 

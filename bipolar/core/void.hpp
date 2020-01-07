@@ -7,11 +7,6 @@
 //! It's more like the unit type in functional programming language.
 //! Introduce here for facilitating template meta-programming.
 //!
-//! # Issues
-//!
-//! - https://github.com/condy0919/bipolar/issues/21
-//!
-//!
 //! [`void`]: http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2016/p0146r1.html
 
 #ifndef BIPOLAR_CORE_VOID_HPP_
@@ -25,8 +20,12 @@ struct Void {
     constexpr Void(Void&&) noexcept = default;
     constexpr Void& operator=(Void&&) noexcept = default;
 
+    // It shadows all constructors including move and copy.
+    //
+    // See the story behind the code
+    // https://github.com/condy0919/bipolar/issues/21
     template <typename T>
-    constexpr explicit Void(T&&) noexcept {}
+    constexpr explicit Void(T&&) noexcept {} // NOLINT
 };
 
 inline constexpr bool operator==(Void, Void) noexcept {

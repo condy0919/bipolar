@@ -5,15 +5,14 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
-#include <cassert>
-
+#include "bipolar/core/assert.hpp"
 #include "bipolar/net/internal/native_to_socket_address.hpp"
 
 namespace bipolar {
 UdpSocket::~UdpSocket() noexcept {
-    if (fd_ != -1) {
-        ::close(fd_);
-    }
+    const auto res = close();
+    BIPOLAR_ASSERT(!res.is_error(), "udp socket closed with error: {}",
+                   res.error());
 }
 
 Result<UdpSocket, int> UdpSocket::try_clone() noexcept {
@@ -32,10 +31,18 @@ Result<UdpSocket, int> UdpSocket::bind(const SocketAddress& sa) noexcept {
         return Err(errno);
     }
 
+    const int optval = 1;
+    int ret =
+        ::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+    if (ret == -1) {
+        ::close(sock);
+        return Err(errno);
+    }
+
     const auto addr = sa.to_sockaddr();
     const socklen_t len = sa.addr().is_ipv4() ? sizeof(struct sockaddr_in)
                                               : sizeof(struct sockaddr_in6);
-    const int ret = ::bind(sock, (const struct sockaddr*)&addr, len);
+    ret = ::bind(sock, (const struct sockaddr*)&addr, len);
     if (ret == -1) {
         ::close(sock);
         return Err(errno);
@@ -51,6 +58,28 @@ Result<Void, int> UdpSocket::connect(const SocketAddress& sa) noexcept {
     const int ret = ::connect(fd_, (const struct sockaddr*)&addr, addr_len);
     if (ret == -1) {
         return Err(errno);
+    }
+    return Ok(Void{});
+}
+
+Result<Void, int> UdpSocket::dissolve() noexcept {
+    struct sockaddr sa = {
+        .sa_family = AF_UNSPEC,
+    };
+    const int ret = ::connect(fd_, &sa, sizeof(sa));
+    if (ret == -1) {
+        return Err(errno);
+    }
+    return Ok(Void{});
+}
+
+Result<Void, int> UdpSocket::close() noexcept {
+    if (fd_ != -1) {
+        const int copy_fd = std::exchange(fd_, -1);
+        const int ret = ::close(copy_fd);
+        if (ret == -1) {
+            return Err(errno);
+        }
     }
     return Ok(Void{});
 }
@@ -127,9 +156,8 @@ UdpSocket::recvfrom(void* buf, std::size_t len, int flags) noexcept {
     }
 
     return internal::native_addr_to_socket_address(&addr, addr_len)
-        .map([ret](SocketAddress&& sa) {
-            return std::make_tuple(static_cast<std::size_t>(ret),
-                                   std::move(sa));
+        .map([ret](SocketAddress sa) {
+            return std::make_tuple(static_cast<std::size_t>(ret), sa);
         });
 }
 

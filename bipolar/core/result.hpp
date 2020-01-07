@@ -10,41 +10,27 @@
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
-#include "bipolar/core/internal/enable_special_members.hpp"
-#include "bipolar/core/option.hpp"
 #include "bipolar/core/traits.hpp"
-#include "bipolar/core/void.hpp"
-
-/// Macro sugar for unwraping a `Result`. Early return when `Err` state
-///
-/// # Constraints
-///
-/// expr :: Result<T, E>
-#define BIPOLAR_TRY(expr)                                                      \
-    ({                                                                         \
-        using PlainExprType = ::std::decay_t<decltype(expr)>;                  \
-        static_assert(::bipolar::detail::is_result_v<PlainExprType>);          \
-        auto result = (expr);                                                  \
-        if (!bool(result)) {                                                   \
-            return result;                                                     \
-        }                                                                      \
-        ::std::move(result.value());                                           \
-    })
 
 namespace bipolar {
 template <typename T, typename E>
 class Result;
 
-/// Empty variant of `Result`
-struct Empty {};
+/// Pending variant of `Result`
+struct Pending {};
 
 /// Ok variant of `Result`
 template <typename T>
 struct Ok {
-    constexpr /*implicit*/ Ok(T&& val) : value(std::move(val)) {}
+    constexpr /*implicit*/ Ok(T&& val) noexcept(
+        std::is_nothrow_move_constructible_v<T>)
+        : value(std::move(val)) {}
 
-    constexpr /*implicit*/ Ok(const T& val) : value(val) {}
+    constexpr /*implicit*/ Ok(const T& val) noexcept(
+        std::is_nothrow_copy_constructible_v<T>)
+        : value(val) {}
 
     template <typename E>
     constexpr Result<T, E> into() && {
@@ -57,9 +43,13 @@ struct Ok {
 /// Err variant of `Result`
 template <typename E>
 struct Err {
-    constexpr /*implicit*/ Err(E&& err) : error(std::move(err)) {}
+    constexpr /*implicit*/ Err(E&& err) noexcept(
+        std::is_nothrow_move_constructible_v<E>)
+        : error(std::move(err)) {}
 
-    constexpr /*implicit*/ Err(const E& err) : error(err) {}
+    constexpr /*implicit*/ Err(const E& err) noexcept(
+        std::is_nothrow_copy_constructible_v<E>)
+        : error(err) {}
 
     template <typename T>
     constexpr Result<T, E> into() && {
@@ -72,28 +62,32 @@ struct Err {
 namespace detail {
 /// `Result` related traits:
 /// - is_result
-/// - is_empty
+/// - is_pending
 /// - is_ok
 /// - is_error
 template <typename T>
+// NOLINTNEXTLINE(readability-identifier-naming)
 using is_result = is_instantiation_of<T, Result>;
 
 template <typename T>
 inline constexpr bool is_result_v = is_result<T>::value;
 
 template <typename T>
-using is_empty = std::is_same<T, Empty>;
+// NOLINTNEXTLINE(readability-identifier-naming)
+using is_pending = std::is_same<T, Pending>;
 
 template <typename T>
-inline constexpr bool is_empty_v = is_empty<T>::value;
+inline constexpr bool is_pending_v = is_pending<T>::value;
 
 template <typename T>
+// NOLINTNEXTLINE(readability-identifier-naming)
 using is_ok = is_instantiation_of<T, Ok>;
 
 template <typename T>
 inline constexpr bool is_ok_v = is_ok<T>::value;
 
 template <typename T>
+// NOLINTNEXTLINE(readability-identifier-naming)
 using is_error = is_instantiation_of<T, Err>;
 
 template <typename T>
@@ -101,405 +95,11 @@ inline constexpr bool is_error_v = is_error<T>::value;
 
 /// Checks whether all `T` meet the `Trait` or not
 template <template <typename> typename Trait, typename... Ts>
+// NOLINTNEXTLINE(readability-identifier-naming)
 using all_of = std::conjunction<Trait<Ts>...>;
 
 template <template <typename> typename Trait, typename... Ts>
 inline constexpr bool all_of_v = all_of<Trait, Ts...>::value;
-
-/// The data type that storage holds
-enum class Which : unsigned char {
-    Empty, ///< Empty
-    Value, ///< Ok
-    Error, ///< Err
-};
-
-struct EmptyTag {};
-struct ValueTag {};
-struct ErrorTag {};
-
-/// StorageTrait
-///
-/// With [`CRTP`] idiom, `Derived` class is still incomplete.
-/// Using traits as workaround.
-///
-/// [`CRTP`]: https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
-template <typename>
-struct StorageTrait;
-
-template <typename, typename>
-struct SmallTrivialStorage;
-
-template <typename, typename>
-struct TrivialStorage;
-
-template <typename, typename>
-struct NonTrivialStorage;
-
-template <typename T, typename E>
-struct StorageTrait<SmallTrivialStorage<T, E>> {
-    using value_type = T;
-    using error_type = E;
-};
-
-template <typename T, typename E>
-struct StorageTrait<TrivialStorage<T, E>> {
-    using value_type = T;
-    using error_type = E;
-};
-
-template <typename T, typename E>
-struct StorageTrait<NonTrivialStorage<T, E>> {
-    using value_type = T;
-    using error_type = E;
-};
-
-/// The storage interface type using `CRTP`
-/// See `SmallTrivialStorage`, `TrivialStorage`, `NonTrivialStorage` for details
-template <typename Derived>
-class Storage {
-    using T = typename StorageTrait<Derived>::value_type;
-    using E = typename StorageTrait<Derived>::error_type;
-
-public:
-    /// Resets to empty.
-    /// Both trivial and nontrivial types are inheriting this
-    constexpr void assign_empty() {
-        that()->clear();
-        that()->which(Which::Empty);
-    }
-
-    /// Assigns a value
-    /// - For trivial types, uses assignment operator
-    /// - For nontrivial types, it will be overridden
-    template <typename... Ts>
-    constexpr void assign_value(Ts&&... ts) {
-        that()->clear();
-        that()->which(Which::Value);
-        // consider T is const qualified
-        if constexpr (std::is_assignable_v<T, T>) {
-            that()->value_ = T(std::forward<Ts>(ts)...);
-        } else {
-            new ((void*)std::addressof(value())) T(std::forward<Ts>(ts)...);
-        }
-    }
-
-    /// Assigns an error
-    /// - For trivial types, uses assignment operator
-    /// - For nontrivial types, it will be overridden
-    template <typename... Es>
-    constexpr void assign_error(Es&&... es) {
-        that()->clear();
-        that()->which(Which::Error);
-        // consider T is const qualified
-        if constexpr (std::is_assignable_v<E, E>) {
-            that()->error_ = E(std::forward<Es>(es)...);
-        } else {
-            new ((void*)std::addressof(error())) E(std::forward<Es>(es)...);
-        }
-    }
-
-    /// Assigns other results
-    template <typename U>
-    constexpr void assign(U&& rhs) {
-        switch (rhs.which()) {
-        case Which::Empty:
-            that()->assign_empty();
-            break;
-
-        case Which::Value:
-            that()->assign_value(std::forward<U>(rhs).value());
-            break;
-
-        case Which::Error:
-            that()->assign_error(std::forward<U>(rhs).error());
-            break;
-
-        default:
-            break;
-        }
-    }
-
-    /// Resets to empty
-    /// - For trivial types, it does nothing
-    /// - For nontrivial types, it will be overridden
-    constexpr void clear() {}
-
-    /// Returns the value
-    constexpr T& value() & {
-        return that()->value_;
-    }
-
-    constexpr const T& value() const& {
-        return that()->value_;
-    }
-
-    constexpr T&& value() && {
-        return std::move(that()->value_);
-    }
-
-    constexpr const T&& value() const&& {
-        return std::move(that()->value_);
-    }
-
-    /// Returns the error
-    constexpr E& error() & {
-        return that()->error_;
-    }
-
-    constexpr const E& error() const& {
-        return that()->error_;
-    }
-
-    constexpr E&& error() && {
-        return std::move(that()->error_);
-    }
-
-    constexpr const E&& error() const&& {
-        return std::move(that()->error_);
-    }
-
-    /// Returns the holding data type
-    constexpr Which which() const {
-        return that()->which_;
-    }
-
-    /// Sets the holding data type
-    constexpr void which(Which w) {
-        that()->which_ = w;
-    }
-
-private:
-    constexpr Derived* that() {
-        return static_cast<Derived*>(this);
-    }
-
-    constexpr const Derived* that() const {
-        return static_cast<const Derived*>(this);
-    }
-};
-
-/// Small trivial storage type
-///
-/// For small (pointer-sized) trivial types, a struct is faster than a union
-/// Benchmark on `Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz`
-///
-/// | Storage |    CPU (ns) |
-/// |---------+-------------|
-/// | struct  | 7.42        |
-/// | union   | 7.81        |
-template <typename T, typename E>
-struct SmallTrivialStorage : Storage<SmallTrivialStorage<T, E>> {
-    static_assert(std::is_trivial_v<T>, "T must be trivial");
-    static_assert(std::is_trivial_v<E>, "E must be trivial");
-    static_assert(sizeof(std::pair<T, E>) <= sizeof(void* [2]),
-                  "SmallTrivialStorage isn't smaller than 2 pointers");
-
-    Which which_;
-    [[no_unique_address]] T value_;
-    [[no_unique_address]] E error_;
-
-    constexpr explicit SmallTrivialStorage(EmptyTag) noexcept(
-        std::is_nothrow_default_constructible_v<T>&&
-            std::is_nothrow_default_constructible_v<E>)
-        : which_(Which::Empty), value_{}, error_{} {}
-
-    template <typename... Ts>
-    constexpr explicit SmallTrivialStorage(ValueTag, Ts&&... ts) noexcept(
-        std::is_nothrow_constructible_v<T, Ts...>&&
-            std::is_nothrow_default_constructible_v<E>)
-        : which_(Which::Value), value_(std::forward<Ts>(ts)...), error_{} {}
-
-    template <typename... Es>
-    constexpr explicit SmallTrivialStorage(ErrorTag, Es&&... es) noexcept(
-        std::is_nothrow_constructible_v<E, Es...>&&
-            std::is_nothrow_default_constructible_v<T>)
-        : which_(Which::Error), value_{}, error_(std::forward<Es>(es)...) {}
-};
-
-/// TrivialStorage
-///
-/// It's trivial :)
-template <typename T, typename E>
-struct TrivialStorage : Storage<TrivialStorage<T, E>> {
-    static_assert(std::is_trivially_copyable_v<T>,
-                  "T must be trivially copyable");
-    static_assert(std::is_trivially_copyable_v<E>,
-                  "E must be trivially copyable");
-
-    Which which_;
-    union {
-        [[no_unique_address]] T value_;
-        [[no_unique_address]] E error_;
-        char dummy_;
-    };
-
-    constexpr explicit TrivialStorage(EmptyTag) noexcept
-        : which_(Which::Empty), dummy_('\0') {}
-
-    template <typename... Ts>
-    constexpr explicit TrivialStorage(ValueTag, Ts&&... ts) noexcept(
-        std::is_nothrow_constructible_v<T, Ts...>)
-        : which_(Which::Value), value_(std::forward<Ts>(ts)...) {}
-
-    template <typename... Es>
-    constexpr explicit TrivialStorage(ErrorTag, Es&&... es) noexcept(
-        std::is_nothrow_constructible_v<E, Es...>)
-        : which_(Which::Error), error_(std::forward<Es>(es)...) {}
-};
-
-/// NonTrivialStorageInner
-///
-/// The inner storage type used with non-trivial types.
-///
-/// See `NonTrivialStorage` for details
-template <typename T, typename E>
-struct NonTrivialStorageInner {
-    Which which_ = Which::Empty;
-    union {
-        [[no_unique_address]] T value_;
-        [[no_unique_address]] E error_;
-        char dummy_;
-    };
-
-    explicit constexpr NonTrivialStorageInner(EmptyTag) noexcept
-        : which_(Which::Empty), dummy_('\0') {}
-
-    template <typename... Ts>
-    explicit constexpr NonTrivialStorageInner(ValueTag, Ts&&... ts) noexcept(
-        std::is_nothrow_constructible_v<T, Ts...>)
-        : which_(Which::Value), value_(std::forward<Ts>(ts)...) {}
-
-    template <typename... Es>
-    explicit constexpr NonTrivialStorageInner(ErrorTag, Es&&... es) noexcept(
-        std::is_nothrow_constructible_v<E, Es...>)
-        : which_(Which::Error), error_(std::forward<Es>(es)...) {}
-
-    constexpr NonTrivialStorageInner(const NonTrivialStorageInner&) {}
-
-    constexpr NonTrivialStorageInner(NonTrivialStorageInner&&) noexcept {}
-
-    constexpr NonTrivialStorageInner& operator=(const NonTrivialStorageInner&) {
-        return *this;
-    }
-
-    constexpr NonTrivialStorageInner&
-    operator=(NonTrivialStorageInner&&) noexcept {
-        return *this;
-    }
-
-    ~NonTrivialStorageInner() {}
-};
-
-/// nontrivial storage type
-/// - copy-ctor requires `T` and `E` all copy constructible
-/// - move-ctor requires `T` and `E` all move constructible
-/// - copy-assign requires copy-ctor and `T` and `E` all copy assignable
-/// - move-assign requires move-ctor and `T` and `E` all move assignable
-template <typename T, typename E>
-struct NonTrivialStorage
-    : Storage<NonTrivialStorage<T, E>>,
-      NonTrivialStorageInner<T, E>,
-      internal::EnableCopyConstructor<
-          all_of_v<std::is_copy_constructible, T, E>,
-          all_of_v<std::is_nothrow_copy_constructible, T, E>,
-          NonTrivialStorage<T, E>>,
-      internal::EnableMoveConstructor<
-          all_of_v<std::is_move_constructible, T, E>,
-          all_of_v<std::is_nothrow_move_constructible, T, E>,
-          NonTrivialStorage<T, E>>,
-      internal::EnableCopyAssignment<
-          all_of_v<std::is_copy_constructible, T, E> &&
-              all_of_v<std::is_copy_assignable, T, E>,
-          all_of_v<std::is_nothrow_copy_constructible, T, E> &&
-              all_of_v<std::is_nothrow_copy_assignable, T, E>,
-          NonTrivialStorage<T, E>>,
-      internal::EnableMoveAssignment<
-          all_of_v<std::is_move_constructible, T, E> &&
-              all_of_v<std::is_move_assignable, T, E>,
-          all_of_v<std::is_nothrow_move_constructible, T, E> &&
-              all_of_v<std::is_nothrow_move_assignable, T, E>,
-          NonTrivialStorage<T, E>> {
-
-    using Base = Storage<NonTrivialStorage<T, E>>;
-
-    /// Imports constructors
-    using NonTrivialStorageInner<T, E>::NonTrivialStorageInner;
-
-    /// Conditionally enables copy/move constructors and assignments
-    ///
-    /// Go to the end of file for *internal::Enable* stuff specializations
-    constexpr NonTrivialStorage(const NonTrivialStorage&) = default;
-    constexpr NonTrivialStorage(NonTrivialStorage&&) = default;
-    constexpr NonTrivialStorage& operator=(const NonTrivialStorage&) = default;
-    constexpr NonTrivialStorage& operator=(NonTrivialStorage&&) = default;
-
-    ~NonTrivialStorage() {
-        clear();
-    }
-
-    /// Destructs current value/error
-    /// Overrides (actually shadows) the `Base` empty clear
-    constexpr void clear() /*override*/ {
-        switch (this->which_) {
-        case Which::Empty:
-            break;
-
-        case Which::Value:
-            this->value_.~T();
-            break;
-
-        case Which::Error:
-            this->error_.~E();
-            break;
-
-        default:
-            break;
-        }
-    }
-
-    /// Re-introduce
-    using Base::assign_empty;
-
-    /// Overrides (actually shadows) the `Base` assign_value
-    template <typename... Ts>
-    constexpr void assign_value(Ts&&... ts) {
-        this->clear();
-        this->which(Which::Value);
-        new ((void*)std::addressof(this->value())) T(std::forward<Ts>(ts)...);
-    }
-
-    /// Overrides (actually shadows) the `Base` assign_error
-    template <typename... Es>
-    constexpr void assign_error(Es&&... es) {
-        this->clear();
-        this->which(Which::Error);
-        new ((void*)std::addressof(this->value())) E(std::forward<Es>(es)...);
-    }
-
-    /// Overrides (actually shadows) the `Base` assign
-    template <typename U>
-    constexpr void assign(U&& rhs) {
-        if constexpr (std::is_same_v<std::decay_t<U>, NonTrivialStorage>) {
-            if (this == std::addressof(rhs)) {
-                return;
-            }
-        }
-        this->Base::assign(std::forward<U>(rhs));
-    }
-};
-
-// The storage type which Result will use
-//
-// SmallTrivialStorage, if `T` and `E` are small trivial types (2 pointer-sized)
-// TrivialStorage, if `T` and `E` are trivially copyable
-// NonTrivialStorage, otherwise
-template <typename T, typename E>
-using ResultStorage = std::conditional_t<
-    all_of_v<std::is_trivial, T, E> &&
-        sizeof(std::pair<T, E>) <= sizeof(void* [2]),
-    SmallTrivialStorage<T, E>,
-    std::conditional_t<all_of_v<std::is_trivially_copyable, T, E>,
-                       TrivialStorage<T, E>, NonTrivialStorage<T, E>>>;
 } // namespace detail
 
 /// BadResultAccess
@@ -511,18 +111,21 @@ class BadResultAccess : public std::logic_error {
 public:
     BadResultAccess() : std::logic_error("Bad result access") {}
 
-    BadResultAccess(const char* s) : std::logic_error(s) {}
+    explicit BadResultAccess(const char* s) : std::logic_error(s) {}
 };
 
 /// Result
 ///
 /// # Brief
 ///
-/// `Result` is a type that represents either success Ok or failure
+/// `Result` is a type that represents success, failure or pending. And it can
+/// be used for returning and propagating errors.
 ///
-/// `Result` is the type used for returning and propagating errors. It's a
-/// `std::pair` like class with the variants, `Ok`, representing success and
-/// containing a value, and `Err`, representing error and containing an error.
+/// It's a `std::pair` like class with the variants:
+/// - `Ok`, representing success and containing a value
+/// - `Err`, representing error and containing an error
+/// - `Pending`, representing pending...
+///
 /// Functions return `Result` whenever errors are expected and recoverable.
 ///
 /// A simple function returning `Result` might be defined and used like so:
@@ -539,21 +142,26 @@ public:
 /// `Result` has similar combinators with `Option`, see document comments for
 /// details.
 template <typename T, typename E>
-class Result final : public detail::ResultStorage<T, E> {
+class Result final {
     static_assert(!std::is_reference_v<T>,
                   "Result cannot be used with reference type");
     static_assert(!std::is_abstract_v<T>,
                   "Result cannot be used with abstract type");
 
-    using Base = detail::ResultStorage<T, E>;
+    template <typename, typename>
+    friend class Result;
 
 public:
-    using value_type = T;
-    using error_type = E;
+    using value_type = T; // NOLINT(readability-identifier-naming)
+    using error_type = E; // NOLINT(readability-identifier-naming)
 
     ////////////////////////////////////////////////////////////////////////////
     // Constructors & Assignments
     ////////////////////////////////////////////////////////////////////////////
+
+    /// Constructs an `Pending` variant of `Result`
+    constexpr Result() noexcept : sto_(std::in_place_index_t<0>{}) {}
+    constexpr /*implicit*/ Result(Pending) noexcept : Result() {}
 
     /// Constructs from `Ok` variant
     ///
@@ -561,17 +169,17 @@ public:
     /// const Result<int, int> x(Ok(42));
     /// assert(x.has_value());
     /// ```
-    template <bool C = true,
-              std::enable_if_t<C && std::is_move_constructible_v<T>, int> = 0>
-    constexpr /*implicit*/ Result(Ok<T>&& ok) noexcept(
-        std::is_nothrow_move_constructible_v<T>)
-        : Base{detail::ValueTag{}, std::move(ok.value)} {}
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<T, U&&>, int> = 0>
+    constexpr /*implicit*/ Result(Ok<U>&& ok) noexcept(
+        std::is_nothrow_constructible_v<T, U&&>)
+        : sto_(std::in_place_index_t<1>{}, std::move(ok.value)) {}
 
-    template <bool C = true,
-              std::enable_if_t<C && std::is_copy_constructible_v<T>, int> = 0>
-    constexpr /*implicit*/ Result(const Ok<T>& ok) noexcept(
-        std::is_nothrow_copy_constructible_v<T>)
-        : Base{detail::ValueTag{}, ok.value} {}
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<T, U>, int> = 0>
+    constexpr /*implicit*/ Result(const Ok<U>& ok) noexcept(
+        std::is_nothrow_constructible_v<T, U>)
+        : sto_(std::in_place_index_t<1>{}, ok.value) {}
 
     /// Constructs from `Err` variant
     ///
@@ -579,17 +187,17 @@ public:
     /// const Result<int, int> x(Err(42));
     /// assert(x.has_error());
     /// ```
-    template <bool C = true,
-              std::enable_if_t<C && std::is_move_constructible_v<E>, int> = 0>
-    constexpr /*implicit*/ Result(Err<E>&& err) noexcept(
-        std::is_nothrow_move_constructible_v<E>)
-        : Base{detail::ErrorTag{}, std::move(err.error)} {}
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<E, U&&>, int> = 0>
+    constexpr /*implicit*/ Result(Err<U>&& err) noexcept(
+        std::is_nothrow_constructible_v<E, U&&>)
+        : sto_(std::in_place_index_t<2>{}, std::move(err.error)) {}
 
-    template <bool C = true,
-              std::enable_if_t<C && std::is_copy_constructible_v<E>, int> = 0>
-    constexpr /*implicit*/ Result(const Err<E>& err) noexcept(
-        std::is_nothrow_copy_constructible_v<E>)
-        : Base{detail::ErrorTag{}, err.error} {}
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<E, U>, int> = 0>
+    constexpr /*implicit*/ Result(const Err<U>& err) noexcept(
+        std::is_nothrow_constructible_v<E, U>)
+        : sto_(std::in_place_index_t<2>{}, err.error) {}
 
     /// Constructs from other type `Result<X, Y>` where
     /// `T` can be constructible with `X` and
@@ -601,9 +209,20 @@ public:
                                int> = 0>
     constexpr Result(const Result<X, Y>& rhs) noexcept(
         std::is_nothrow_constructible_v<T, X>&&
-            std::is_nothrow_constructible_v<E, Y>)
-        : Base{detail::EmptyTag{}} {
-        Base::assign(rhs);
+            std::is_nothrow_constructible_v<E, Y>) {
+        switch (rhs.sto_.index()) {
+        case 0:
+            sto_.template emplace<0>();
+            break;
+
+        case 1:
+            sto_.template emplace<1>(std::get<1>(rhs.sto_));
+            break;
+
+        case 2:
+            sto_.template emplace<2>(std::get<2>(rhs.sto_));
+            break;
+        }
     }
 
     template <typename X, typename Y,
@@ -613,75 +232,122 @@ public:
                                int> = 0>
     constexpr Result(Result<X, Y>&& rhs) noexcept(
         std::is_nothrow_constructible_v<T, X&&>&&
-            std::is_nothrow_constructible_v<E, Y&&>)
-        : Base{detail::EmptyTag{}} {
-        Base::assign(std::move(rhs));
+            std::is_nothrow_constructible_v<E, Y&&>) {
+        switch (rhs.sto_.index()) {
+        case 0:
+            sto_.template emplace<0>();
+            break;
+
+        case 1:
+            sto_.template emplace<1>(std::move(std::get<1>(rhs.sto_)));
+            break;
+
+        case 2:
+            sto_.template emplace<2>(std::move(std::get<2>(rhs.sto_)));
+            break;
+        }
     }
 
-    /// Default constructs from other results
-    /// Disabled if `T` or `E` is not move-constructible or copy-constructible
-    constexpr Result(Result&&) = default;
-    constexpr Result(const Result&) = default;
+    /// Constructs from other results, leaving it pending
+    constexpr Result(Result&& rhs) noexcept(
+        detail::all_of_v<std::is_nothrow_move_constructible, T, E>)
+        : sto_(std::move(rhs.sto_)) {
+        rhs.sto_.template emplace<0>();
+    }
 
-    /// Assigns with others
-    /// Disabled if `T` or `E` is not move-constructible or copy-constructible
-    constexpr Result& operator=(Result&&) = default;
+    constexpr Result& operator=(Result&& rhs) noexcept(
+        detail::all_of_v<std::is_nothrow_move_assignable, T, E>) {
+        sto_ = std::move(rhs.sto_);
+        rhs.sto_.template emplace<0>();
+        return *this;
+    }
+
+    /// Copy/Assigns if copyable/assignable
+    constexpr Result(const Result&) = default;
     constexpr Result& operator=(const Result&) = default;
 
-    /// see `assign`
-    constexpr Result& operator=(const Ok<T>& ok) {
-        Base::assign_value(ok.value);
+    /// Assigns a pending
+    constexpr Result& operator=(Pending) noexcept {
+        assign(Pending{});
         return *this;
     }
 
-    constexpr Result& operator=(Ok<T>&& ok) {
-        Base::assign_value(std::move(ok.value));
+    /// Assigns an ok
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<T, U>, int> = 0>
+    constexpr Result&
+    operator=(const Ok<U>& ok) noexcept(std::is_nothrow_constructible_v<T, U>) {
+        assign(ok);
         return *this;
     }
 
-    /// see `assign`
-    constexpr Result& operator=(const Err<E>& err) {
-        Base::assign_error(err.error);
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<T, U&&>, int> = 0>
+    constexpr Result&
+    operator=(Ok<U>&& ok) noexcept(std::is_nothrow_constructible_v<T, U&&>) {
+        assign(std::move(ok));
         return *this;
     }
 
-    constexpr Result& operator=(Err<E>&& err) {
-        Base::assign_error(std::move(err.error));
+    /// Assigns an error
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<E, U>, int> = 0>
+    constexpr Result& operator=(const Err<U>& err) noexcept(
+        std::is_nothrow_constructible_v<E, U>) {
+        assign(err);
         return *this;
     }
 
-    /// Assigns with `Empty` type
-    /// Exports `assign_empty` interface
-    constexpr void assign(Empty) {
-        Base::assign_empty();
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<E, U&&>, int> = 0>
+    constexpr Result&
+    operator=(Err<U>&& err) noexcept(std::is_nothrow_constructible_v<E, U&&>) {
+        assign(std::move(err));
+        return *this;
+    }
+
+    /// Assigns with `Pending` type
+    constexpr void assign(Pending) noexcept {
+        sto_.template emplace<0>();
     }
 
     /// Assigns with `Ok` type
-    /// Exports `assign_value` interface
-    constexpr void assign(const Ok<T>& ok) {
-        Base::assign_value(ok.value);
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<T, U>, int> = 0>
+    constexpr void
+    assign(const Ok<U>& ok) noexcept(std::is_nothrow_constructible_v<T, U>) {
+        sto_.template emplace<1>(ok.value);
     }
 
-    constexpr void assign(Ok<T>&& ok) {
-        Base::assign_value(std::move(ok.value));
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<T, U&&>, int> = 0>
+    constexpr void
+    assign(Ok<U>&& ok) noexcept(std::is_nothrow_constructible_v<T, U&&>) {
+        sto_.template emplace<1>(std::move(ok.value));
     }
 
     /// Assigns with `Err` type
-    /// Exports `assign_error` interface
-    constexpr void assign(const Err<E>& err) {
-        Base::assign_error(err.value);
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<E, U>, int> = 0>
+    constexpr void
+    assign(const Err<U>& err) noexcept(std::is_nothrow_constructible_v<E, U>) {
+        sto_.template emplace<2>(err.error);
     }
 
-    constexpr void assign(Err<E>&& err) {
-        Base::assign_error(std::move(err.value));
+    template <typename U,
+              std::enable_if_t<std::is_constructible_v<E, U&&>, int> = 0>
+    constexpr void
+    assign(Err<U>&& err) noexcept(std::is_nothrow_constructible_v<E, U&&>) {
+        sto_.template emplace<2>(std::move(err.error));
     }
 
     ////////////////////////////////////////////////////////////////////////////
     // Combinators
     ////////////////////////////////////////////////////////////////////////////
 
-    /// Maps a Result<T, E> to Result<U, E> by applying a function
-    /// to the contained `Ok` value, leaving an `Err` value untouched.
+    /// Maps a `Result<T, E>` to `Result<U, E>` by applying a function
+    /// to the contained `Ok` value.
+    /// Has no effect With `Pending` or `Err`.
     ///
     /// # Constraints
     ///
@@ -692,22 +358,41 @@ public:
     /// ```
     /// const Result<int, int> x(Ok(2));
     /// const auto res = x.map([](int x) { return x + 1; });
-    /// assert(res.has_value() && res.value() == 3);
+    /// assert(res.is_ok() && res.value() == 3);
     /// ```
     template <typename F, typename U = std::invoke_result_t<F, T>>
     constexpr Result<U, E> map(F&& f) const& {
-        return has_value() ? Ok(std::forward<F>(f)(value()))
-                           : static_cast<Result<U, E>>(Err(error()));
+        switch (sto_.index()) {
+        case 0:
+            return Pending{};
+
+        case 1:
+            return Ok(std::forward<F>(f)(std::get<1>(sto_)));
+
+        case 2:
+            return Err(std::get<2>(sto_));
+        }
+        __builtin_unreachable();
     }
 
     template <typename F, typename U = std::invoke_result_t<F, T>>
     constexpr Result<U, E> map(F&& f) && {
-        return has_value() ? Ok(std::forward<F>(f)(std::move(value())))
-                           : static_cast<Result<U, E>>(Err(std::move(error())));
+        switch (sto_.index()) {
+        case 0:
+            return Pending{};
+
+        case 1:
+            return Ok(std::forward<F>(f)(std::move(std::get<1>(sto_))));
+
+        case 2:
+            return Err(std::move(std::get<2>(sto_)));
+        }
+        __builtin_unreachable();
     }
 
     /// Maps a Result<T, E> to U by applying a function to the contained
     /// `Ok` value, or a fallback function to a contained `Err` value.
+    /// If it's `Pending`, throws `BadResultAccess` exception.
     ///
     /// # Constraints
     ///
@@ -733,20 +418,23 @@ public:
               std::enable_if_t<std::is_same_v<U, std::invoke_result_t<M, E>>,
                                int> = 0>
     constexpr U map_or_else(M&& fallback, F&& f) const& {
-        return has_value() ? std::forward<F>(f)(value())
-                           : std::forward<M>(fallback)(error());
+        nonpending_required();
+        return is_ok() ? std::forward<F>(f)(std::get<1>(sto_))
+                       : std::forward<M>(fallback)(std::get<2>(sto_));
     }
 
     template <typename M, typename F, typename U = std::invoke_result_t<F, T>,
               std::enable_if_t<std::is_same_v<U, std::invoke_result_t<M, E>>,
                                int> = 0>
     constexpr U map_or_else(M&& fallback, F&& f) && {
-        return has_value() ? std::forward<F>(f)(std::move(value()))
-                           : std::forward<M>(fallback)(std::move(error()));
+        nonpending_required();
+        return is_ok()
+                   ? std::forward<F>(f)(std::move(std::get<1>(sto_)))
+                   : std::forward<M>(fallback)(std::move(std::get<2>(sto_)));
     }
 
     /// Maps a `Result<T, E>` to `Result<T, U>` by applying a function
-    /// to the contained `Err` value, leaving an `Ok` value untouched.
+    /// to the contained `Err` value, leaving an `Ok`/`Pending` value untouched.
     ///
     /// # Constraints
     ///
@@ -761,22 +449,41 @@ public:
     ///
     /// const Result<int, int> y(Err(3));
     /// const auto res2 = y.map_err([](int x) { return x + 1; });
-    /// assert(res2.has_error() && res2.error() == 4);
+    /// assert(res2.is_error() && res2.error() == 4);
     /// ```
     template <typename F, typename U = std::invoke_result_t<F, E>>
     constexpr Result<T, U> map_err(F&& f) const& {
-        return has_value() ? static_cast<Result<T, U>>(Ok(value()))
-                           : Err(std::forward<F>(f)(error()));
+        switch (sto_.index()) {
+        case 0:
+            return Pending{};
+
+        case 1:
+            return Ok(std::get<1>(sto_));
+
+        case 2:
+            return Err(std::forward<F>(f)(std::get<2>(sto_)));
+        }
+        __builtin_unreachable();
     }
 
     template <typename F, typename U = std::invoke_result_t<F, E>>
     constexpr Result<T, U> map_err(F&& f) && {
-        return has_value() ? static_cast<Result<T, U>>(Ok(std::move(value())))
-                           : Err(std::forward<F>(f)(std::move(error())));
+        switch (sto_.index()) {
+        case 0:
+            return Pending{};
+
+        case 1:
+            return Ok(std::move(std::get<1>(sto_)));
+
+        case 2:
+            return Err(std::forward<F>(f)(std::move(std::get<2>(sto_))));
+        }
+        __builtin_unreachable();
     }
 
     /// Calls `f` if the result is `Ok`, otherwise returns the `Err` value of
     /// self.
+    /// If it's `Pending`, throws `BadResultAccess` exception.
     ///
     /// # Constraints
     ///
@@ -804,8 +511,9 @@ public:
                                    std::is_same_v<typename U::error_type, E>,
                                int> = 0>
     constexpr U and_then(F&& f) const& {
-        return has_value() ? std::forward<F>(f)(value())
-                           : static_cast<U>(Err(error()));
+        nonpending_required();
+        return is_ok() ? std::forward<F>(f)(std::get<1>(sto_))
+                       : static_cast<U>(Err(std::get<2>(sto_)));
     }
 
     template <typename F, typename U = std::invoke_result_t<F, T>,
@@ -813,12 +521,14 @@ public:
                                    std::is_same_v<typename U::error_type, E>,
                                int> = 0>
     constexpr U and_then(F&& f) && {
-        return has_value() ? std::forward<F>(f)(std::move(value()))
-                           : static_cast<U>(Err(std::move(error())));
+        nonpending_required();
+        return is_ok() ? std::forward<F>(f)(std::move(std::get<1>(sto_)))
+                       : static_cast<U>(Err(std::move(std::get<2>(sto_))));
     }
 
     /// Calls `f` if the result is `Err`, otherwise returns the `Ok` value of
     /// self.
+    /// If it's `Pending`, throws `BadResultAccess` exception.
     ///
     /// # Constraints
     ///
@@ -846,8 +556,9 @@ public:
                                    std::is_same_v<typename U::value_type, T>,
                                int> = 0>
     constexpr U or_else(F&& f) const& {
-        return has_value() ? static_cast<U>(Ok(value()))
-                           : std::forward<F>(f)(error());
+        nonpending_required();
+        return is_ok() ? static_cast<U>(Ok(std::get<1>(sto_)))
+                       : std::forward<F>(f)(std::get<2>(sto_));
     }
 
     template <typename F, typename U = std::invoke_result_t<F, E>,
@@ -855,8 +566,9 @@ public:
                                    std::is_same_v<typename U::value_type, T>,
                                int> = 0>
     constexpr U or_else(F&& f) && {
-        return has_value() ? static_cast<U>(Ok(std::move(value())))
-                           : std::forward<F>(f)(std::move(error()));
+        nonpending_required();
+        return is_ok() ? static_cast<U>(Ok(std::move(std::get<1>(sto_))))
+                       : std::forward<F>(f)(std::move(std::get<2>(sto_)));
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -877,7 +589,7 @@ public:
     template <typename U,
               std::enable_if_t<is_equality_comparable_v<T, U>, int> = 0>
     constexpr bool contains(const U& x) const noexcept {
-        return has_value() ? Base::value() == x : false;
+        return is_ok() ? std::get<1>(sto_) == x : false;
     }
 
     /// Returns `true` if the result is an `Err` value containing the
@@ -896,47 +608,7 @@ public:
     template <typename U,
               std::enable_if_t<is_equality_comparable_v<E, U>, int> = 0>
     constexpr bool contains_err(const U& x) const noexcept {
-        return has_error() ? Base::error() == x : false;
-    }
-
-    /// Converts from `Result<T, E>` to `Option<T>`
-    /// If it's an error, discards the error value.
-    ///
-    /// ```
-    /// const Result<int, int> x(Ok(2));
-    /// const auto optx = x.ok();
-    /// assert(optx.has_value() && optx.value() == 2);
-    ///
-    /// const Result<int, int> y(Err(2));
-    /// const auto opty = y.ok();
-    /// assert(!opty.has_value());
-    /// ```
-    constexpr Option<T> ok() const& {
-        return has_value() ? Some(value()) : None;
-    }
-
-    constexpr Option<T> ok() && {
-        return has_value() ? Some(std::move(value())) : None;
-    }
-
-    /// Converts from `Result<T, E>` to `Option<E>`
-    /// If it's an ok, discards the ok value.
-    ///
-    /// ```
-    /// const Result<int, int> x(Ok(2));
-    /// const auto optx = x.err();
-    /// assert(!optx.has_value());
-    ///
-    /// const Result<int, int> y(Err(2));
-    /// const auto opty = y.err();
-    /// assert(opty.has_value() && opty.value() == 2);
-    /// ```
-    constexpr Option<E> err() const& {
-        return has_error() ? Some(error()) : None;
-    }
-
-    constexpr Option<E> err() && {
-        return has_error() ? Some(std::move(error())) : None;
+        return is_error() ? std::get<2>(sto_) == x : false;
     }
 
     /// Inplacement constructs from args
@@ -951,31 +623,8 @@ public:
     template <typename... Args>
     constexpr T& emplace(Args&&... args) noexcept(
         std::is_nothrow_constructible_v<T, Args...>) {
-        Base::assign_value(std::forward<Args>(args)...);
-        return Base::value();
-    }
-
-    /// Returns `true` if the result is `Ok` variant
-    ///
-    /// ```
-    /// Result<int, int> res = Ok(3);
-    /// assert(res.has_value());
-    ///
-    /// Result<int, int> err_res = Err(3);
-    /// assert(!res.has_value());
-    /// ```
-    constexpr bool has_value() const noexcept {
-        return Base::which() == detail::Which::Value;
-    }
-
-    /// Returns `true` if the result is `Err` variant
-    ///
-    /// ```
-    /// Result<int, int> err_res = Err(3);
-    /// assert(err_res.has_error());
-    /// ```
-    constexpr bool has_error() const noexcept {
-        return Base::which() == detail::Which::Error;
+        sto_.template emplace<1>(std::forward<Args>(args)...);
+        return std::get<1>(sto_);
     }
 
     /// Unwraps a result, yielding the content of an `Ok`.
@@ -994,17 +643,19 @@ public:
     /// ```
     template <typename U>
     constexpr T value_or(U&& deft) const& {
-        return has_value() ? value() : static_cast<T>(std::forward<U>(deft));
+        return is_ok() ? std::get<1>(sto_)
+                       : static_cast<T>(std::forward<U>(deft));
     }
 
     template <typename U>
     constexpr T value_or(U&& deft) && {
-        return has_value() ? std::move(value())
-                           : static_cast<T>(std::forward<U>(deft));
+        return is_ok() ? std::move(std::get<1>(sto_))
+                       : static_cast<T>(std::forward<U>(deft));
     }
 
     /// Unwraps a result, yielding the content of an `Ok`
-    /// If the value is an `Err`, then it calls `f` with its `Err`
+    /// If the value is an `Err`, then it calls `f` with its `Err`.
+    /// Otherwise throws a `BadResultAccess` exception.
     ///
     /// # Constraints
     ///
@@ -1025,15 +676,23 @@ public:
               std::enable_if_t<std::is_same_v<std::invoke_result_t<F, E>, T>,
                                int> = 0>
     constexpr T value_or_else(F&& f) const& {
-        return has_value() ? value() : std::forward<F>(f)(error());
+        nonpending_required();
+        return is_ok() ? std::get<1>(sto_)
+                       : std::forward<F>(f)(std::get<2>(sto_));
     }
 
     template <typename F,
               std::enable_if_t<std::is_same_v<std::invoke_result_t<F, E>, T>,
                                int> = 0>
     constexpr T value_or_else(F&& f) && {
-        return has_value() ? std::move(value())
-                           : std::forward<F>(f)(std::move(error()));
+        nonpending_required();
+        return is_ok() ? std::move(std::get<1>(sto_))
+                       : std::forward<F>(f)(std::move(std::get<2>(sto_)));
+    }
+
+    /// Resets to `Pending` state
+    constexpr void reset() {
+        assign(Pending{});
     }
 
     /// Unwraps a result, yielding the content of an `Ok`
@@ -1041,22 +700,31 @@ public:
     /// Throws BadResultAccess when the result is `Err`
     constexpr T& value() & {
         value_required();
-        return Base::value();
+        return std::get<1>(sto_);
     }
 
     constexpr const T& value() const& {
         value_required();
-        return Base::value();
+        return std::get<1>(sto_);
     }
 
     constexpr T&& value() && {
         value_required();
-        return std::move(Base::value());
+        return std::move(std::get<1>(sto_));
     }
 
     constexpr const T&& value() const&& {
         value_required();
-        return std::move(Base::value());
+        return std::move(std::get<1>(sto_));
+    }
+
+    /// Takes the result's value, leaving it in a pending state
+    ///
+    /// Throws `BadResultAccess` when not `Ok`
+    constexpr T take_value() {
+        auto v = std::move(value());
+        reset();
+        return v;
     }
 
     /// Unwraps a result, yielding the content of an `Ok`
@@ -1064,12 +732,12 @@ public:
     /// Throws BadResultAccess with description when the result is `Err`
     constexpr const T& expect(const char* s) const& {
         value_required(s);
-        return Base::value();
+        return std::get<1>(sto_);
     }
 
     constexpr T&& expect(const char* s) && {
         value_required(s);
-        return std::move(Base::value());
+        return std::move(std::get<1>(sto_));
     }
 
     /// Unwraps a result, yielding the content of an `Err`
@@ -1077,22 +745,31 @@ public:
     /// Throws BadResultAccess when the result is `Ok`
     constexpr E& error() & {
         error_required();
-        return Base::error();
+        return std::get<2>(sto_);
     }
 
     constexpr const E& error() const& {
         error_required();
-        return Base::error();
+        return std::get<2>(sto_);
     }
 
     constexpr E&& error() && {
         error_required();
-        return std::move(Base::error());
+        return std::move(std::get<2>(sto_));
     }
 
     constexpr const E&& error() const&& {
         error_required();
-        return std::move(Base::error());
+        return std::move(std::get<2>(sto_));
+    }
+
+    /// Takes the result's error, leaving it in a pending state
+    ///
+    /// Throws `BadResultAccess` when not `Err`
+    constexpr E take_error() {
+        auto e = std::move(error());
+        reset();
+        return e;
     }
 
     /// Unwraps a result, yielding the content of an `Err`
@@ -1100,22 +777,58 @@ public:
     /// Throws BadResultAccess with description when the result is `Ok`
     constexpr const E& expect_err(const char* s) const& {
         error_required(s);
-        return Base::error();
+        return std::get<2>(sto_);
     }
 
     constexpr const E&& expect_err(const char* s) && {
         error_required(s);
-        return std::move(Base::error());
+        return std::move(std::get<2>(sto_));
     }
 
-    /// Checks whether the result is `Ok` or not
-    explicit constexpr operator bool() const noexcept {
-        return has_value();
+    /// Returns `true` if the result is `Pending` variant
+    ///
+    /// ```
+    /// Result<int, int> res;
+    /// assert(res.is_pending());
+    ///
+    /// Result<int, int> x = Ok(3);
+    /// assert(!res.is_pending());
+    /// ```
+    [[nodiscard]] constexpr bool is_pending() const noexcept {
+        return sto_.index() == 0;
+    }
+
+    /// Returns `true` if the result is `Ok` variant
+    ///
+    /// ```
+    /// Result<int, int> res = Ok(3);
+    /// assert(res.is_ok());
+    ///
+    /// Result<int, int> err_res = Err(3);
+    /// assert(!res.is_ok());
+    /// ```
+    [[nodiscard]] constexpr bool is_ok() const noexcept {
+        return sto_.index() == 1;
+    }
+
+    /// Returns `true` if the result is `Err` variant
+    ///
+    /// ```
+    /// Result<int, int> err_res = Err(3);
+    /// assert(err_res.is_error());
+    /// ```
+    [[nodiscard]] constexpr bool is_error() const noexcept {
+        return sto_.index() == 2;
+    }
+
+    /// Checks if the result is not `Pending`
+    constexpr explicit operator bool() const noexcept {
+        return sto_.index() != 0;
     }
 
     /// Dereference makes it more like a pointer
     ///
-    /// Throws BadResultAccess when the result is `Err`
+    /// Throws `BadResultAccess` when the result is `Err`
     constexpr T& operator*() & {
         return value();
     }
@@ -1134,7 +847,7 @@ public:
 
     /// Arrow operator makes it more like a pointer
     ///
-    /// Throws BadResultAccess when the result is `Err`
+    /// Throws `BadResultAccess` when the result is `Err`
     constexpr const T* operator->() const {
         return std::addressof(value());
     }
@@ -1143,105 +856,45 @@ public:
         return std::addressof(value());
     }
 
-    /// Returns the pointer to internal storage
-    /// If it's an `Err`, `nullptr` is returned.
-    constexpr T* get_pointer() & noexcept {
-        return has_value() ? std::addressof(Base::value()) : nullptr;
-    }
-
-    constexpr const T* get_pointer() const& noexcept {
-        return has_value() ? std::addressof(Base::value()) : nullptr;
-    }
-
-    constexpr T* get_pointer() && noexcept = delete;
-
     /// Swaps with other results
     constexpr void swap(Result& rhs) noexcept(
         detail::all_of_v<std::is_nothrow_swappable, T, E>) {
-        using std::swap;
-        if (has_value()) {
-            if (rhs.has_value()) {
-                swap(Base::value(), rhs.Base::value());
-            } else {
-                E err = std::move(rhs.Base::error());
-                rhs.Base::assign_value(std::move(Base::value()));
-                Base::assign_error(std::move(err));
-            }
-        } else {
-            if (rhs.has_error()) {
-                swap(Base::error(), rhs.Base::error());
-            } else {
-                T ok = std::move(rhs.Base::value());
-                rhs.Base::assign_error(std::move(Base::error()));
-                Base::assign_value(std::move(ok));
-            }
+        std::swap(sto_, rhs.sto_);
+    }
+
+private:
+    constexpr void nonpending_required() const {
+        if (is_pending()) {
+            throw BadResultAccess();
         }
     }
 
-private:
-    ////////////////////////////////////////////////////////////////////////////
-    // Internal use only
-    ////////////////////////////////////////////////////////////////////////////
-
-    /// Constructs an `Empty` variant of `Result`
-    ///
-    /// NOTE:
-    /// Use `make_empty_result()` instead.
-    constexpr /*implicit*/ Result() noexcept : Base{detail::EmptyTag{}} {}
-
-    /// Returns `true` if the result is `Empty`
-    ///
-    /// ```
-    /// auto empty = make_empty_result<int, int>();
-    /// assert(has_nothing(empty));
-    /// ```
-    constexpr bool has_nothing() const noexcept {
-        return Base::which() == detail::Which::Empty;
-    }
-
-    // Creates an empty `Result`
-    template <typename U, typename V>
-    friend constexpr Result<U, V> make_empty_result() noexcept;
-
-    // Checks if the `Result` has nothing
-    template <typename U, typename V>
-    friend constexpr bool has_nothing(const Result<U, V>& result) noexcept;
-
-private:
     constexpr void value_required() const {
-        if (!has_value()) {
+        if (!is_ok()) {
             throw BadResultAccess();
         }
     }
 
     constexpr void value_required(const char* s) const {
-        if (!has_value()) {
+        if (!is_ok()) {
             throw BadResultAccess(s);
         }
     }
 
     constexpr void error_required() const {
-        if (!has_error()) {
+        if (!is_error()) {
             throw BadResultAccess();
         }
     }
 
     constexpr void error_required(const char* s) const {
-        if (!has_error()) {
+        if (!is_error()) {
             throw BadResultAccess(s);
         }
     }
+
+    std::variant<std::monostate, T, E> sto_;
 };
-
-template <typename U, typename V>
-constexpr Result<U, V> make_empty_result() noexcept {
-    return {};
-}
-
-template <typename U, typename V>
-constexpr bool has_nothing(const Result<U, V>& result) noexcept {
-    return result.has_nothing();
-}
 
 /// Swaps Results
 ///
@@ -1259,12 +912,12 @@ template <
                      int> = 0>
 inline constexpr bool operator==(const Result<T, E>& lhs,
                                  const Result<T, E>& rhs) {
-    if (lhs.has_value() && rhs.has_value()) {
+    if (lhs.is_ok() && rhs.is_ok()) {
         return lhs.value() == rhs.value();
-    } else if (lhs.has_error() == rhs.has_error()) {
+    } else if (lhs.is_error() == rhs.is_error()) {
         return lhs.error() == rhs.error();
     }
-    return false;
+    return lhs.is_pending() == rhs.is_pending();
 }
 
 template <
@@ -1276,90 +929,18 @@ inline constexpr bool operator!=(const Result<T, E>& lhs,
     return !(lhs == rhs);
 }
 
-template <
-    typename T, typename E,
-    std::enable_if_t<
-        is_less_than_comparable_v<T> && is_less_than_comparable_v<E>, int> = 0>
-inline constexpr bool operator<(const Result<T, E>& lhs,
-                                const Result<T, E>& rhs) {
-    if (lhs.has_value()) {
-        if (rhs.has_value()) {
-            return lhs.value() < rhs.value();
-        } else {
-            return false;
-        }
-    } else {
-        if (rhs.has_error()) {
-            return lhs.error() < rhs.error();
-        } else {
-            return true;
-        }
-    }
-}
-
-template <
-    typename T, typename E,
-    std::enable_if_t<
-        is_less_than_comparable_v<T> && is_less_than_comparable_v<E>, int> = 0>
-inline constexpr bool operator<=(const Result<T, E>& lhs,
-                                 const Result<T, E>& rhs) {
-    return !(rhs < lhs);
-}
-
-template <
-    typename T, typename E,
-    std::enable_if_t<
-        is_less_than_comparable_v<T> && is_less_than_comparable_v<E>, int> = 0>
-inline constexpr bool operator>(const Result<T, E>& lhs,
-                                const Result<T, E>& rhs) {
-    return rhs < lhs;
-}
-
-template <
-    typename T, typename E,
-    std::enable_if_t<
-        is_less_than_comparable_v<T> && is_less_than_comparable_v<E>, int> = 0>
-inline constexpr bool operator>=(const Result<T, E>& lhs,
-                                 const Result<T, E>& rhs) {
-    return !(lhs < rhs);
-}
-
 /// Specialized comparisons with `Ok` Type
 /// `Ok` is in the right
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<T>, int> = 0>
 inline constexpr bool operator==(const Result<T, E>& lhs, const Ok<T>& rhs) {
-    return lhs.has_value() && lhs.value() == rhs.value;
+    return lhs.is_ok() && lhs.value() == rhs.value;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<T>, int> = 0>
 inline constexpr bool operator!=(const Result<T, E>& lhs, const Ok<T>& rhs) {
     return !(lhs == rhs);
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline constexpr bool operator<(const Result<T, E>& lhs, const Ok<T>& rhs) {
-    return lhs.has_error() || lhs.value() < rhs.value;
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline constexpr bool operator<=(const Result<T, E>& lhs, const Ok<T>& rhs) {
-    return lhs.has_error() || lhs.value() <= rhs.value;
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline constexpr bool operator>(const Result<T, E>& lhs, const Ok<T>& rhs) {
-    return lhs.has_value() && lhs.value() > rhs.value;
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline constexpr bool operator>=(const Result<T, E>& lhs, const Ok<T>& rhs) {
-    return lhs.has_value() && lhs.value() >= rhs.value;
 }
 
 /// Specialized comparisons with `Ok` Type
@@ -1376,66 +957,18 @@ inline constexpr bool operator!=(const Ok<T>& lhs, const Result<T, E>& rhs) {
     return rhs != lhs;
 }
 
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline constexpr bool operator<(const Ok<T>& lhs, const Result<T, E>& rhs) {
-    return rhs > lhs;
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline constexpr bool operator<=(const Ok<T>& lhs, const Result<T, E>& rhs) {
-    return rhs >= lhs;
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline constexpr bool operator>(const Ok<T>& lhs, const Result<T, E>& rhs) {
-    return rhs < lhs;
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<T>, int> = 0>
-inline constexpr bool operator>=(const Ok<T>& lhs, const Result<T, E>& rhs) {
-    return rhs <= lhs;
-}
-
 /// Specialized comparisons with `Err` Type
 /// `Err` is in the right
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<E>, int> = 0>
 inline constexpr bool operator==(const Result<T, E>& lhs, const Err<E>& rhs) {
-    return lhs.has_error() && lhs.error() == rhs.error;
+    return lhs.is_error() && lhs.error() == rhs.error;
 }
 
 template <typename T, typename E,
           std::enable_if_t<is_equality_comparable_v<E>, int> = 0>
 inline constexpr bool operator!=(const Result<T, E>& lhs, const Err<E>& rhs) {
     return !(lhs == rhs);
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline constexpr bool operator<(const Result<T, E>& lhs, const Err<E>& rhs) {
-    return lhs.has_error() && lhs.error() < rhs.error;
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline constexpr bool operator<=(const Result<T, E>& lhs, const Err<E>& rhs) {
-    return lhs.has_error() && lhs.error() <= rhs.error;
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline constexpr bool operator>(const Result<T, E>& lhs, const Err<E>& rhs) {
-    return lhs.has_value() || lhs.error() > rhs.error;
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline constexpr bool operator>=(const Result<T, E>& lhs, const Err<E>& rhs) {
-    return lhs.has_value() || lhs.error() >= rhs.error;
 }
 
 /// Specialized comparisons with `Err` Type
@@ -1451,92 +984,6 @@ template <typename T, typename E,
 inline constexpr bool operator!=(const Err<E>& lhs, const Result<T, E>& rhs) {
     return rhs != lhs;
 }
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline constexpr bool operator<(const Err<E>& lhs, const Result<T, E>& rhs) {
-    return rhs > lhs;
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline constexpr bool operator<=(const Err<E>& lhs, const Result<T, E>& rhs) {
-    return rhs >= lhs;
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline constexpr bool operator>(const Err<E>& lhs, const Result<T, E>& rhs) {
-    return rhs < lhs;
-}
-
-template <typename T, typename E,
-          std::enable_if_t<is_less_than_comparable_v<E>, int> = 0>
-inline constexpr bool operator>=(const Err<E>& lhs, const Result<T, E>& rhs) {
-    return rhs <= lhs;
-}
-
-// specializatio of ctor/dtor/assignment of `NonTrivialStorage`
-namespace internal {
-// clang-format off
-template <bool Noexcept, typename T, typename E>
-struct EnableCopyConstructor<true, Noexcept, detail::NonTrivialStorage<T, E>> {
-    constexpr EnableCopyConstructor() noexcept = default;
-
-    constexpr EnableCopyConstructor(const EnableCopyConstructor& rhs) noexcept(Noexcept) {
-        using Derived = detail::NonTrivialStorage<T, E>;
-        static_cast<Derived*>(this)->assign(static_cast<const Derived&>(rhs));
-    }
-
-    constexpr EnableCopyConstructor(EnableCopyConstructor&&) noexcept                 = default;
-    constexpr EnableCopyConstructor& operator=(const EnableCopyConstructor&) noexcept = default;
-    constexpr EnableCopyConstructor& operator=(EnableCopyConstructor&&) noexcept      = default;
-};
-
-template <bool Noexcept, typename T, typename E>
-struct EnableCopyAssignment<true, Noexcept, detail::NonTrivialStorage<T, E>> {
-    constexpr EnableCopyAssignment() noexcept                            = default;
-    constexpr EnableCopyAssignment(const EnableCopyAssignment&) noexcept = default;
-    constexpr EnableCopyAssignment(EnableCopyAssignment&&) noexcept      = default;
-
-    constexpr EnableCopyAssignment& operator=(const EnableCopyAssignment& rhs) noexcept(Noexcept) {
-        using Derived = detail::NonTrivialStorage<T, E>;
-        static_cast<Derived*>(this)->assign(static_cast<const Derived&>(rhs));
-        return *this;
-    }
-
-    constexpr EnableCopyAssignment& operator=(EnableCopyAssignment&&) noexcept = default;
-};
-
-template <bool Noexcept, typename T, typename E>
-struct EnableMoveConstructor<true, Noexcept, detail::NonTrivialStorage<T, E>> {
-    constexpr EnableMoveConstructor() noexcept                             = default;
-    constexpr EnableMoveConstructor(const EnableMoveConstructor&) noexcept = default;
-
-    constexpr EnableMoveConstructor(EnableMoveConstructor&& rhs) noexcept(Noexcept) {
-        using Derived = detail::NonTrivialStorage<T, E>;
-        static_cast<Derived*>(this)->assign(std::move(static_cast<Derived&>(rhs)));
-    }
-
-    constexpr EnableMoveConstructor& operator=(const EnableMoveConstructor&) noexcept = default;
-    constexpr EnableMoveConstructor& operator=(EnableMoveConstructor&&) noexcept      = default;
-};
-
-template <bool Noexcept, typename T, typename E>
-struct EnableMoveAssignment<true, Noexcept, detail::NonTrivialStorage<T, E>> {
-    constexpr EnableMoveAssignment() noexcept                                       = default;
-    constexpr EnableMoveAssignment(const EnableMoveAssignment&) noexcept            = default;
-    constexpr EnableMoveAssignment(EnableMoveAssignment&&) noexcept                 = default;
-    constexpr EnableMoveAssignment& operator=(const EnableMoveAssignment&) noexcept = default;
-
-    constexpr EnableMoveAssignment& operator=(EnableMoveAssignment&& rhs) noexcept(Noexcept) {
-        using Derived = detail::NonTrivialStorage<T, E>;
-        static_cast<Derived*>(this)->assign(std::move(static_cast<Derived&>(rhs)));
-        return *this;
-    }
-};
-// clang-format on
-} // namespace internal
 
 } // namespace bipolar
 

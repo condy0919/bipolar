@@ -44,11 +44,11 @@ TEST(PendingTask, non_empty_task) {
 
     {
         std::uint64_t cnt = 0;
-        PendingTask task(make_promise([&]() -> AsyncResult<Void, Void> {
+        PendingTask task(make_promise([&]() -> Result<Void, Void> {
             if (++cnt == 3) {
-                return AsyncOk(Void{});
+                return Ok(Void{});
             }
-            return AsyncPending{};
+            return Pending{};
         }));
         EXPECT_TRUE(task);
 
@@ -68,11 +68,11 @@ TEST(PendingTask, non_empty_task) {
 
     {
         std::uint64_t cnt = 0;
-        PendingTask task(make_promise([&]() -> AsyncResult<int, Void> {
+        PendingTask task(make_promise([&]() -> Result<int, Void> {
             if (++cnt == 2) {
-                return AsyncOk(0);
+                return Ok(0);
             }
-            return AsyncPending{};
+            return Pending{};
         }));
         EXPECT_TRUE(task);
 

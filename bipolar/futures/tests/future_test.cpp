@@ -61,7 +61,7 @@ TEST(Future, empty) {
     }
 
     {
-        Future<Void, Void> empty(AsyncPending{});
+        Future<Void, Void> empty(Pending{});
         EXPECT_EQ(empty.state(), FutureState::EMPTY);
         EXPECT_FALSE(empty);
         EXPECT_TRUE(empty.is_empty());
@@ -77,12 +77,12 @@ TEST(Future, pending_future) {
     FakeContext ctx;
     std::uint64_t cnt = 0;
     Future<int, int> fut(
-        make_promise([&](Context& ctx) -> AsyncResult<int, int> {
+        make_promise([&](Context& ctx) -> Result<int, int> {
             (void)ctx;
             if (++cnt == 3) {
-                return AsyncOk(42);
+                return Ok(42);
             }
-            return AsyncPending{};
+            return Pending{};
         }));
     EXPECT_EQ(fut.state(), FutureState::PENDING);
     EXPECT_TRUE(fut);
@@ -110,12 +110,12 @@ TEST(Future, pending_future) {
 
     // do something similar but this time produce an error to ensure
     // that this state change works as expected too
-    fut = make_promise([&](Context& ctx) -> AsyncResult<int, int> {
+    fut = make_promise([&](Context& ctx) -> Result<int, int> {
         (void)ctx;
         if (++cnt == 5) {
-            return AsyncError(42);
+            return Err(42);
         }
-        return AsyncPending{};
+        return Pending{};
     });
     EXPECT_EQ(fut.state(), FutureState::PENDING);
     EXPECT_FALSE(fut(ctx));
@@ -129,7 +129,7 @@ TEST(Future, pending_future) {
 
 TEST(Future, ok_future) {
     FakeContext ctx;
-    Future<int, Void> fut(AsyncOk(42));
+    Future<int, Void> fut(Ok(42));
     EXPECT_EQ(fut.state(), FutureState::OK);
     EXPECT_TRUE(fut);
     EXPECT_FALSE(fut.is_empty());
@@ -148,12 +148,12 @@ TEST(Future, ok_future) {
     EXPECT_EQ(fut.value(), 42);
 
     // destructive access
-    fut = AsyncOk(43);
+    fut = Ok(43);
     EXPECT_EQ(fut.state(), FutureState::OK);
     EXPECT_EQ(fut.take_result().value(), 43);
     EXPECT_EQ(fut.state(), FutureState::EMPTY);
 
-    fut = AsyncOk(44);
+    fut = Ok(44);
     EXPECT_EQ(fut.state(), FutureState::OK);
     EXPECT_EQ(fut.take_value(), 44);
     EXPECT_EQ(fut.state(), FutureState::EMPTY);
@@ -161,7 +161,7 @@ TEST(Future, ok_future) {
 
 TEST(Future, error_future) {
     FakeContext ctx;
-    Future<Void, int> fut(AsyncError(42));
+    Future<Void, int> fut(Err(42));
     EXPECT_EQ(fut.state(), FutureState::ERROR);
     EXPECT_TRUE(fut);
     EXPECT_FALSE(fut.is_empty());
@@ -180,12 +180,12 @@ TEST(Future, error_future) {
     EXPECT_EQ(fut.error(), 42);
 
     // destructive access
-    fut = AsyncError(43);
+    fut = Err(43);
     EXPECT_TRUE(fut.result().is_error());
     EXPECT_EQ(fut.take_result().error(), 43);
     EXPECT_EQ(fut.state(), FutureState::EMPTY);
 
-    fut = AsyncError(44);
+    fut = Err(44);
     EXPECT_TRUE(fut.result().is_error());
     EXPECT_EQ(fut.take_result().error(), 44);
     EXPECT_EQ(fut.state(), FutureState::EMPTY);
@@ -195,13 +195,13 @@ TEST(Future, assignment_and_swap) {
     Future<Void, Void> x;
     EXPECT_EQ(x.state(), FutureState::EMPTY);
 
-    x = AsyncOk(Void{});
+    x = Ok(Void{});
     EXPECT_EQ(x.state(), FutureState::OK);
 
-    x = AsyncError(Void{});
+    x = Err(Void{});
     EXPECT_EQ(x.state(), FutureState::ERROR);
 
-    x = AsyncPending{};
+    x = Pending{};
     EXPECT_EQ(x.state(), FutureState::EMPTY);
 
     x = nullptr;
@@ -210,7 +210,7 @@ TEST(Future, assignment_and_swap) {
     x = Promise<Void, Void>();
     EXPECT_EQ(x.state(), FutureState::EMPTY);
 
-    x = make_promise([]() { return AsyncOk(Void{}); });
+    x = make_promise([]() { return Ok(Void{}); });
     EXPECT_EQ(x.state(), FutureState::PENDING);
 
     Future<Void, Void> y(std::move(x));
@@ -227,7 +227,7 @@ TEST(Future, make_future) {
     std::uint64_t cnt = 0;
     auto fut = make_future(make_promise([&]() {
         ++cnt;
-        return AsyncOk(42);
+        return Ok(42);
     }));
     EXPECT_TRUE(fut(ctx));
     EXPECT_EQ(fut.value(), 42);

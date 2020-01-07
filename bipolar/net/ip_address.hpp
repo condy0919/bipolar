@@ -18,6 +18,7 @@
 
 #include "bipolar/core/byteorder.hpp"
 #include "bipolar/core/option.hpp"
+#include "bipolar/core/overload.hpp"
 #include "bipolar/core/result.hpp"
 
 namespace bipolar {
@@ -68,17 +69,6 @@ public:
     /// ```
     /// IPv6Address v6;
     /// assert(v6.str() == "::");
-    /// ```
-    ///
-    /// @TODO Checks if it's a clang (constexpr) bug
-    ///
-    /// ```
-    /// struct Foo {
-    ///     constexpr Foo(int, int) : Foo(0) {}
-    ///
-    ///     template <typename T>
-    ///     constexpr Foo(T) {} // inline function not defined
-    /// };
     /// ```
     constexpr IPv6Address() noexcept : addr_(0, 0, 0, 0) {}
 
@@ -148,10 +138,10 @@ public:
     ///
     /// ```
     /// const auto r1 = IPv6Address::from_str("127.0.0");
-    /// assert(r1.has_err() && r1.error() == IPAddressFormatError::INVALID_IP);
+    /// assert(r1.is_err() && r1.error() == IPAddressFormatError::INVALID_IP);
     ///
     /// const auto r2 = IPv6Address::from_str("::1");
-    /// assert(r2.has_value() && r2.value().str() == "::1");
+    /// assert(r2.is_ok() && r2.value().str() == "::1");
     /// ```
     static Result<IPv6Address, IPAddressFormatError>
     from_str(std::string_view sv) noexcept;
@@ -164,7 +154,7 @@ public:
     /// IPv6Address v6;
     /// assert(v6.segments() == {});
     /// ```
-    const std::array<std::uint16_t, 8> segments() const {
+    [[nodiscard]] const std::array<std::uint16_t, 8> segments() const {
         return reinterpret_cast<const std::array<std::uint16_t, 8>&>(addr_);
     }
 
@@ -179,7 +169,7 @@ public:
     /// auto localhost = IPv6Address::from_str("::1").value();
     /// assert(localhost.octets()[15] == 1);
     /// ```
-    const std::array<std::uint8_t, 16> octets() const {
+    [[nodiscard]] const std::array<std::uint8_t, 16> octets() const {
         return reinterpret_cast<const std::array<std::uint8_t, 16>&>(addr_);
     }
 
@@ -194,7 +184,7 @@ public:
     /// auto localhost = IPv6Address::from_str("::1").value();
     /// assert(!localhost.is_unspecified());
     /// ```
-    constexpr bool is_unspecified() const noexcept {
+    [[nodiscard]] constexpr bool is_unspecified() const noexcept {
         return addr_.addr32[0] == 0 && addr_.addr32[1] == 0 &&
                addr_.addr32[2] == 0 && addr_.addr32[3] == 0;
     }
@@ -210,9 +200,10 @@ public:
     /// auto localhost = IPv6Address::from_str("::1").value();
     /// assert(localhost.is_loopback());
     /// ```
-    constexpr bool is_loopback() const noexcept {
+    [[nodiscard]] constexpr bool is_loopback() const noexcept {
         return addr_.addr32[0] == 0 && addr_.addr32[1] == 0 &&
-               addr_.addr32[2] == 0 && addr_.addr32[3] == hton(1u);
+               addr_.addr32[2] == 0 &&
+               addr_.addr32[3] == hton(std::uint32_t(1));
     }
 
     /// Converts this address to IPv4Address.
@@ -225,15 +216,15 @@ public:
     /// auto v4 = v6.to_ipv4().value();
     /// assert(v4.str() == "0.0.0.1");
     /// ```
-    Option<IPv4Address> to_ipv4() const;
+    [[nodiscard]] Option<IPv4Address> to_ipv4() const;
 
     /// Returns the native type struct `in6_addr`
-    constexpr struct in6_addr native() const noexcept {
+    [[nodiscard]] constexpr struct in6_addr native() const noexcept {
         return addr_.native;
     }
 
     /// Converts to sockaddr to communicate with system call
-    constexpr struct sockaddr_in6 to_sockaddr() const noexcept {
+    [[nodiscard]] constexpr struct sockaddr_in6 to_sockaddr() const noexcept {
         struct sockaddr_in6 addr = {
             .sin6_family = AF_INET6,
             .sin6_addr = addr_.native,
@@ -249,7 +240,7 @@ public:
     /// IPv6Address v6;
     /// assert(v6.str() == "::");
     /// ```
-    std::string str() const;
+    [[nodiscard]] std::string str() const;
 
 private:
     union AddressStorage {
@@ -398,10 +389,10 @@ public:
     ///
     /// ```
     /// const auto r1 = IPv4Address::from_str("127.0.0");
-    /// assert(r1.has_err() && r1.error() == IPAddressFormatError::INVALID_IP);
+    /// assert(r1.is_err() && r1.error() == IPAddressFormatError::INVALID_IP);
     ///
     /// const auto r2 = IPv4Address::from_str("0.0.0.0");
-    /// assert(r2.has_value() && r2.value().str() == "0.0.0.0");
+    /// assert(r2.is_ok() && r2.value().str() == "0.0.0.0");
     /// ```
     static Result<IPv4Address, IPAddressFormatError>
     from_str(std::string_view sv) noexcept;
@@ -414,7 +405,7 @@ public:
     /// IPv4Address localhost(127, 0, 0, 1);
     /// assert(localhost.octets() == (std::array<std::uint8_t, 4>{127,0,0,1}));
     /// ```
-    const std::array<std::uint8_t, 4> octets() const {
+    [[nodiscard]] const std::array<std::uint8_t, 4> octets() const {
         return reinterpret_cast<const std::array<std::uint8_t, 4>&>(addr_);
     }
 
@@ -428,7 +419,7 @@ public:
     ///
     /// assert(IPv4Address().is_unspecified());
     /// ```
-    constexpr bool is_unspecified() const noexcept {
+    [[nodiscard]] constexpr bool is_unspecified() const noexcept {
         return addr_.addr32 == 0;
     }
 
@@ -442,14 +433,14 @@ public:
     ///
     /// assert(!IPv4Address().is_loopback());
     /// ```
-    constexpr bool is_loopback() const noexcept {
+    [[nodiscard]] constexpr bool is_loopback() const noexcept {
         return addr_.addr8[0] == 127;
     }
 
     /// Converts this address to an IPv4-compatible [IPv6 address]
     ///
     /// a.b.c.d becomes: ::a.b.c.d
-    IPv6Address to_ipv6_compatible() const noexcept {
+    [[nodiscard]] IPv6Address to_ipv6_compatible() const noexcept {
         return IPv6Address(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, addr_.addr8[0],
                            addr_.addr8[1], addr_.addr8[2], addr_.addr8[3]);
     }
@@ -457,14 +448,14 @@ public:
     /// Converts this address to an IPv4-mapped [IPv6 address]
     ///
     /// a.b.c.d becomes: ::ffff:a.b.c.d
-    IPv6Address to_ipv6_mapped() const noexcept {
+    [[nodiscard]] IPv6Address to_ipv6_mapped() const noexcept {
         return IPv6Address(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff,
                            addr_.addr8[0], addr_.addr8[1], addr_.addr8[2],
                            addr_.addr8[3]);
     }
 
     /// Returns the native type struct `in_addr`
-    struct in_addr native() const noexcept {
+    [[nodiscard]] struct in_addr native() const noexcept {
         return addr_.native;
     }
 
@@ -477,12 +468,12 @@ public:
     /// IPv4Address v4(0x7f000001);
     /// assert(v4.to_long() == 0x7f000001);
     /// ```
-    constexpr std::uint32_t to_long() const noexcept {
+    [[nodiscard]] constexpr std::uint32_t to_long() const noexcept {
         return addr_.addr32;
     }
 
     /// Converts to sockaddr to communicate with system calls
-    constexpr struct sockaddr_in to_sockaddr() const noexcept {
+    [[nodiscard]] constexpr struct sockaddr_in to_sockaddr() const noexcept {
         struct sockaddr_in addr = {
             .sin_family = AF_INET,
             .sin_addr = addr_.native,
@@ -498,7 +489,7 @@ public:
     /// IPv4Address localhost(127, 0, 0, 1);
     /// assert(localhost.str() == "127.0.0.1");
     /// ```
-    std::string str() const;
+    [[nodiscard]] std::string str() const;
 
 private:
     union AddressStorage {
@@ -567,6 +558,9 @@ inline constexpr bool operator>=(const IPv4Address& lhs,
 /// ```
 class IPAddress {
 public:
+    /// Creates an `IPAddress` with an unspecified protocol
+    constexpr IPAddress() noexcept : addr_(std::monostate{}) {}
+
     /// Creates an `IPAddress` from `IPv4Address`
     ///
     /// # Examples
@@ -590,17 +584,45 @@ public:
         : family_(AF_INET6), addr_(addr) {}
 
     /// `IPv4Address` assignment
+    ///
+    /// IPv{4,6}Address are nothrow copy constructible and destructible that
+    /// guarantees no exceptions thrown.
+    /// NOLINTNEXTLINE(bugprone-exception-escape)
     IPAddress& operator=(const IPv4Address& addr) noexcept {
+        static_assert(std::is_nothrow_copy_constructible_v<IPv4Address>);
+        static_assert(std::is_nothrow_destructible_v<IPv4Address>);
+        static_assert(std::is_nothrow_destructible_v<IPv6Address>);
+
         family_ = AF_INET;
         addr_.emplace<IPv4Address>(addr);
         return *this;
     }
 
     /// `IPv6Address` assignment
+    ///
+    /// IPv{4,6}Address are nothrow copy constructible and destructible that
+    /// guarantees no exceptions thrown.
+    /// NOLINTNEXTLINE(bugprone-exception-escape)
     IPAddress& operator=(const IPv6Address& addr) noexcept {
+        static_assert(std::is_nothrow_copy_constructible_v<IPv6Address>);
+        static_assert(std::is_nothrow_destructible_v<IPv6Address>);
+        static_assert(std::is_nothrow_destructible_v<IPv4Address>);
+
         family_ = AF_INET6;
         addr_.emplace<IPv6Address>(addr);
         return *this;
+    }
+
+    /// Resets to the unspecified protocol state
+    ///
+    /// IPv{4,6} are nothrown destructible that guarantees no exceptions thrown
+    /// NOLINTNEXTLINE(bugprone-exception-escape)
+    void reset() noexcept {
+        static_assert(std::is_nothrow_destructible_v<IPv6Address>);
+        static_assert(std::is_nothrow_destructible_v<IPv4Address>);
+
+        family_ = AF_UNSPEC;
+        addr_.emplace<std::monostate>();
     }
 
     /// Creates a new IPAddress from a `string_view`
@@ -622,66 +644,95 @@ public:
     from_str(std::string_view sv) noexcept;
 
     /// Returns the address family
-    constexpr int family() const noexcept {
+    [[nodiscard]] constexpr int family() const noexcept {
         return family_;
     }
 
+    /// Returns `true` if this address's protocol is unspecified
+    [[nodiscard]] constexpr bool is_empty() const noexcept {
+        return family_ == AF_UNSPEC;
+    }
+
     /// Returns `true` if this address is an IPv4 address
-    constexpr bool is_ipv4() const noexcept {
+    [[nodiscard]] constexpr bool is_ipv4() const noexcept {
         return family_ == AF_INET;
     }
 
     /// Returns `true` if this address is an IPv6 address
-    constexpr bool is_ipv6() const noexcept {
+    [[nodiscard]] constexpr bool is_ipv6() const noexcept {
         return family_ == AF_INET6;
     }
 
     /// Visits address
+    ///
+    /// `F` must be invocable for `IPv4Address`, `IPv6Address` and
+    /// `std::monostate` types.
+    ///
+    /// Uses the `Overload` trick to handle it.
     template <typename F>
     constexpr auto visit(F&& f) const {
-        return is_ipv4() ? std::forward<F>(f)(as_ipv4())
-                         : std::forward<F>(f)(as_ipv6());
+        switch (family()) {
+        case AF_INET:
+            return std::forward<F>(f)(as_ipv4());
+
+        case AF_INET6:
+            return std::forward<F>(f)(as_ipv6());
+
+        case AF_UNSPEC:
+            return std::forward<F>(f)(std::monostate{});
+        }
+        __builtin_unreachable();
     }
 
     /// Returns `true` for the special unspecified address
     ///
     /// see `IPv4Address::is_unspecified` and `IPv6Address::is_unspecified`
     /// for details
-    constexpr bool is_unspecified() const {
-        return visit([](const auto& var) { return var.is_unspecified(); });
+    [[nodiscard]] constexpr bool is_unspecified() const {
+        return visit(Overload{
+            [](const IPv4Address& addr) { return addr.is_unspecified(); },
+            [](const IPv6Address& addr) { return addr.is_unspecified(); },
+            [](std::monostate) { return false; }});
     }
 
     /// Returns `true` for the loopback address
     ///
     /// see `IPv4Address::is_loopback` and `IPv6Address::is_loopback`
     /// for details
-    constexpr bool is_loopback() const {
-        return visit([](const auto& var) { return var.is_loopback(); });
+    [[nodiscard]] constexpr bool is_loopback() const {
+        return visit(
+            Overload{[](const IPv4Address& addr) { return addr.is_loopback(); },
+                     [](const IPv6Address& addr) { return addr.is_loopback(); },
+                     [](std::monostate) { return false; }});
     }
 
     /// Casts the variant to IPv4Address type
     ///
     /// Throws std::bad_variant_access when the IP address is IPv6
-    constexpr const IPv4Address& as_ipv4() const {
+    [[nodiscard]] constexpr const IPv4Address& as_ipv4() const {
         return std::get<IPv4Address>(addr_);
     }
 
     /// Casts the variant to IPv6Address type
     ///
     /// Throws std::bad_variant_access when the IP address is IPv4
-    constexpr const IPv6Address& as_ipv6() const {
+    [[nodiscard]] constexpr const IPv6Address& as_ipv6() const {
         return std::get<IPv6Address>(addr_);
     }
 
     /// Stringify address
     ///
     /// see `IPv4Address::str` and `IPv6Address::str` for details
-    std::string str() const {
-        return visit([](const auto& var) { return var.str(); });
+    [[nodiscard]] std::string str() const {
+        return visit(
+            Overload{[](const IPv4Address& addr) { return addr.str(); },
+                     [](const IPv6Address& addr) { return addr.str(); },
+                     [](std::monostate) -> std::string { return ""; }});
     }
 
     /// Converts to sockaddr to communicate with system call
-    constexpr struct sockaddr_storage to_sockaddr(std::uint16_t port) const {
+    [[nodiscard]] constexpr struct sockaddr_storage
+    to_sockaddr(std::uint16_t port) const {
         struct sockaddr_storage addr = {
             .ss_family = static_cast<unsigned short>(family_),
         };
@@ -690,17 +741,19 @@ public:
             auto& sin = reinterpret_cast<struct sockaddr_in&>(addr);
             sin.sin_addr = as_ipv4().native();
             sin.sin_port = port;
-        } else {
+        } else if (is_ipv6()) {
             auto& sin6 = reinterpret_cast<struct sockaddr_in6&>(addr);
             sin6.sin6_addr = as_ipv6().native();
             sin6.sin6_port = port;
+        } else {
+            // AF_UNSPEC, nothing to do
         }
         return addr;
     }
 
 private:
-    int family_;
-    std::variant<IPv4Address, IPv6Address> addr_;
+    int family_ = AF_UNSPEC;
+    std::variant<std::monostate, IPv4Address, IPv6Address> addr_;
 };
 
 /// Compares `IPAddress` with other `IPAddress`

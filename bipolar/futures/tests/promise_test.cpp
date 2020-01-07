@@ -40,12 +40,12 @@ TEST(Promise, empty) {
 TEST(Promise, invoke) {
     std::uint64_t cnt = 0;
 
-    auto promise = make_promise([&](Context& ctx) -> AsyncResult<Void, Void> {
+    auto promise = make_promise([&](Context& ctx) -> Result<Void, Void> {
         (void)ctx;
         if (++cnt == 2) {
-            return AsyncOk(Void{});
+            return Ok(Void{});
         }
-        return AsyncPending{};
+        return Pending{};
     });
     EXPECT_TRUE(promise);
 
@@ -63,10 +63,10 @@ TEST(Promise, invoke) {
 TEST(Promise, take_continuation) {
     std::uint64_t cnt = 0;
 
-    auto promise = make_promise([&](Context& ctx) -> AsyncResult<Void, Void> {
+    auto promise = make_promise([&](Context& ctx) -> Result<Void, Void> {
                        (void)ctx;
                        ++cnt;
-                       return AsyncPending{};
+                       return Pending{};
                    }).box();
     EXPECT_TRUE(promise);
 
@@ -85,10 +85,10 @@ TEST(Promise, assignment_and_swap) {
 
     std::uint64_t cnt = 0;
 
-    auto promise = make_promise([&](Context& ctx) -> AsyncResult<Void, Void> {
+    auto promise = make_promise([&](Context& ctx) -> Result<Void, Void> {
                        (void)ctx;
                        ++cnt;
-                       return AsyncPending{};
+                       return Pending{};
                    }).box();
     EXPECT_TRUE(promise);
 
@@ -109,11 +109,11 @@ TEST(Promise, assignment_and_swap) {
     x = nullptr;
     EXPECT_FALSE(x);
 
-    y = Function<AsyncResult<Void, Void>(Context&)>(
-        [&](Context& ctx) -> AsyncResult<Void, Void> {
+    y = Function<Result<Void, Void>(Context&)>(
+        [&](Context& ctx) -> Result<Void, Void> {
             (void)ctx;
             cnt *= 2;
-            return AsyncPending{};
+            return Pending{};
         });
     EXPECT_TRUE(y);
     y(ctx);
@@ -137,7 +137,7 @@ TEST(Promise, compare) {
     EXPECT_FALSE(nullptr != promise);
 
     auto p = make_promise(
-        [](Context&) -> AsyncResult<Void, Void> { return AsyncPending{}; });
+        [](Context&) -> Result<Void, Void> { return Pending{}; });
     EXPECT_FALSE(p == nullptr);
     EXPECT_FALSE(nullptr == p);
     EXPECT_TRUE(p != nullptr);
@@ -145,16 +145,16 @@ TEST(Promise, compare) {
 }
 
 TEST(Promise, make_result_promise) {
-    const auto r0 = make_result_promise<int, std::string>(AsyncOk(42))(ctx);
+    const auto r0 = make_result_promise<int, std::string>(Ok(42))(ctx);
     EXPECT_TRUE(r0.is_ok());
     EXPECT_EQ(r0.value(), 42);
 
     const auto r1 =
-        make_result_promise<int, std::string>(AsyncError("oops"s))(ctx);
+        make_result_promise<int, std::string>(Err("oops"s))(ctx);
     EXPECT_TRUE(r1.is_error());
     EXPECT_EQ(r1.error(), "oops");
 
-    const auto r2 = make_result_promise<int, std::string>(AsyncPending{})(ctx);
+    const auto r2 = make_result_promise<int, std::string>(Pending{})(ctx);
     EXPECT_TRUE(r2.is_pending());
 
     const auto r3 = make_ok_promise<int, int>(10)(ctx);
@@ -167,22 +167,22 @@ TEST(Promise, make_result_promise) {
 }
 
 TEST(Promise, make_promise) {
-    const auto r0 = make_promise([](Context& ctx) -> AsyncResult<Void, Void> {
+    const auto r0 = make_promise([](Context& ctx) -> Result<Void, Void> {
         (void)ctx;
-        return AsyncOk(Void{});
+        return Ok(Void{});
     })(ctx);
     EXPECT_TRUE(r0.is_ok());
 
     const auto r1 = make_promise(
-        []() -> AsyncResult<Void, Void> { return AsyncError(Void{}); })(ctx);
+        []() -> Result<Void, Void> { return Err(Void{}); })(ctx);
     EXPECT_TRUE(r1.is_error());
 
-    // AsyncResult<int, char>()
+    // Result<int, char>()
     {
         std::uint64_t cnt = 0;
-        auto p = make_promise([&]() -> AsyncResult<int, char> {
+        auto p = make_promise([&]() -> Result<int, char> {
             ++cnt;
-            return AsyncOk(42);
+            return Ok(42);
         });
         static_assert(std::is_same_v<int, decltype(p)::value_type>);
         static_assert(std::is_same_v<char, decltype(p)::error_type>);
@@ -194,12 +194,12 @@ TEST(Promise, make_promise) {
         EXPECT_FALSE(p);
     }
 
-    // AsyncResult<int, Void>()
+    // Result<int, Void>()
     {
         std::uint64_t cnt = 0;
         auto p = make_promise([&]() {
             ++cnt;
-            return AsyncOk<int>(42);
+            return Ok<int>(42);
         });
         static_assert(std::is_same_v<int, decltype(p)::value_type>);
         static_assert(std::is_same_v<Void, decltype(p)::error_type>);
@@ -211,12 +211,12 @@ TEST(Promise, make_promise) {
         EXPECT_FALSE(p);
     }
 
-    // AsyncResult<Void, int>
+    // Result<Void, int>
     {
         std::uint64_t cnt = 0;
         auto p = make_promise([&]() {
             ++cnt;
-            return AsyncError<int>(42);
+            return Err<int>(42);
         });
         static_assert(std::is_same_v<Void, decltype(p)::value_type>);
         static_assert(std::is_same_v<int, decltype(p)::error_type>);
@@ -228,12 +228,12 @@ TEST(Promise, make_promise) {
         EXPECT_FALSE(p);
     }
 
-    // AsyncResult<Void, Void>
+    // Result<Void, Void>
     {
         std::uint64_t cnt = 0;
         auto p = make_promise([&]() {
             ++cnt;
-            return AsyncPending{};
+            return Pending{};
         });
         static_assert(std::is_same_v<Void, decltype(p)::value_type>);
         static_assert(std::is_same_v<Void, decltype(p)::error_type>);
@@ -249,11 +249,11 @@ TEST(Promise, make_promise) {
         std::uint64_t cnt1 = 0, cnt2 = 0;
         auto p = make_promise([&cnt1, &cnt2]() {
             ++cnt1;
-            return make_promise([&cnt2]() -> AsyncResult<int, char> {
+            return make_promise([&cnt2]() -> Result<int, char> {
                 if (++cnt2 == 2) {
-                    return AsyncOk(42);
+                    return Ok(42);
                 }
-                return AsyncPending{};
+                return Pending{};
             });
         });
         static_assert(std::is_same_v<int, decltype(p)::value_type>);
@@ -279,13 +279,13 @@ TEST(Promise, then) {
     {
         std::uint64_t cnt = 0;
         auto p = make_ok_promise<int, int>(42).then(
-            [&](const AsyncResult<int, int>& result)
-                -> AsyncResult<Void, Void> {
+            [&](const Result<int, int>& result)
+                -> Result<Void, Void> {
                 (void)result;
                 if (++cnt == 2) {
-                    return AsyncOk(Void{});
+                    return Ok(Void{});
                 }
-                return AsyncPending{};
+                return Pending{};
             });
 
         auto result = p(ctx);
@@ -303,13 +303,13 @@ TEST(Promise, then) {
     {
         std::uint64_t cnt = 0;
         auto p = make_error_promise<int, int>(42).then(
-            [&](const AsyncResult<int, int>& result)
-                -> AsyncResult<Void, Void> {
+            [&](const Result<int, int>& result)
+                -> Result<Void, Void> {
                 (void)result;
                 if (++cnt == 2) {
-                    return AsyncOk(Void{});
+                    return Ok(Void{});
                 }
-                return AsyncPending{};
+                return Pending{};
             });
 
         auto result = p(ctx);
@@ -328,27 +328,27 @@ TEST(Promise, then) {
         std::uint64_t cnt = 0;
         auto p =
             make_ok_promise<int, int>(42)
-                .then([&](AsyncResult<int, int>& result)
-                          -> AsyncResult<int, int> {
+                .then([&](Result<int, int>& result)
+                          -> Result<int, int> {
                     ++cnt;
-                    return AsyncOk(result.value() + 1);
+                    return Ok(result.value() + 1);
                 })
-                .then([&](const AsyncResult<int, int>& result)
-                          -> AsyncResult<int, int> {
+                .then([&](const Result<int, int>& result)
+                          -> Result<int, int> {
                     ++cnt;
-                    return AsyncOk(result.value() + 1);
+                    return Ok(result.value() + 1);
                 })
-                .then([&](Context& ctx, AsyncResult<int, int>& result)
-                          -> AsyncResult<int, int> {
+                .then([&](Context& ctx, Result<int, int>& result)
+                          -> Result<int, int> {
                     (void)ctx;
                     ++cnt;
-                    return AsyncOk(result.value() + 1);
+                    return Ok(result.value() + 1);
                 })
-                .then([&](Context& ctx, const AsyncResult<int, int>& result)
-                          -> AsyncResult<int, int> {
+                .then([&](Context& ctx, const Result<int, int>& result)
+                          -> Result<int, int> {
                     (void)ctx;
                     ++cnt;
-                    return AsyncOk(result.value() + 1);
+                    return Ok(result.value() + 1);
                 });
 
         auto result = p(ctx);
@@ -364,12 +364,12 @@ TEST(Promise, and_then) {
     {
         std::uint64_t cnt = 0;
         auto p = make_ok_promise<int, int>(42).and_then(
-            [&](const int& x) -> AsyncResult<Void, int> {
+            [&](const int& x) -> Result<Void, int> {
                 (void)x;
                 if (++cnt == 2) {
-                    return AsyncError(-1);
+                    return Err(-1);
                 }
-                return AsyncPending{};
+                return Pending{};
             });
 
         auto result = p(ctx);
@@ -388,10 +388,10 @@ TEST(Promise, and_then) {
     {
         std::uint64_t cnt = 0;
         auto p = make_error_promise<int, int>(42).and_then(
-            [&](const int& x) -> AsyncResult<Void, int> {
+            [&](const int& x) -> Result<Void, int> {
                 (void)x;
                 ++cnt;
-                return AsyncPending{};
+                return Pending{};
             });
 
         auto result = p(ctx);
@@ -406,24 +406,24 @@ TEST(Promise, and_then) {
         std::uint64_t cnt = 0;
         auto p =
             make_ok_promise<int, int>(42)
-                .and_then([&](int& x) -> AsyncResult<int, int> {
+                .and_then([&](int& x) -> Result<int, int> {
                     ++cnt;
-                    return AsyncOk(x + 1);
+                    return Ok(x + 1);
                 })
-                .and_then([&](const int& x) -> AsyncResult<int, int> {
+                .and_then([&](const int& x) -> Result<int, int> {
                     ++cnt;
-                    return AsyncOk(x + 1);
+                    return Ok(x + 1);
                 })
-                .and_then([&](Context& ctx, int& x) -> AsyncResult<int, int> {
+                .and_then([&](Context& ctx, int& x) -> Result<int, int> {
                     (void)ctx;
                     ++cnt;
-                    return AsyncOk(x + 1);
+                    return Ok(x + 1);
                 })
                 .and_then(
-                    [&](Context& ctx, const int& x) -> AsyncResult<int, int> {
+                    [&](Context& ctx, const int& x) -> Result<int, int> {
                         (void)ctx;
                         ++cnt;
-                        return AsyncOk(x + 1);
+                        return Ok(x + 1);
                     });
 
         auto result = p(ctx);
@@ -439,10 +439,10 @@ TEST(Promise, or_else) {
     {
         std::uint64_t cnt = 0;
         auto p = make_ok_promise<int, int>(42).or_else(
-            [&](const int& x) -> AsyncResult<int, int> {
+            [&](const int& x) -> Result<int, int> {
                 (void)x;
                 ++cnt;
-                return AsyncPending{};
+                return Pending{};
             });
 
         auto result = p(ctx);
@@ -456,10 +456,10 @@ TEST(Promise, or_else) {
     {
         std::uint64_t cnt = 0;
         auto p = make_error_promise<int, int>(42).or_else(
-            [&](const int& x) -> AsyncResult<int, int> {
+            [&](const int& x) -> Result<int, int> {
                 (void)x;
                 ++cnt;
-                return AsyncPending{};
+                return Pending{};
             });
 
         auto result = p(ctx);
@@ -473,24 +473,24 @@ TEST(Promise, or_else) {
         std::uint64_t cnt = 0;
         auto p =
             make_error_promise<int, int>(42)
-                .or_else([&](int& err) -> AsyncResult<int, int> {
+                .or_else([&](int& err) -> Result<int, int> {
                     ++cnt;
-                    return AsyncError(err + 1);
+                    return Err(err + 1);
                 })
-                .or_else([&](const int& err) -> AsyncResult<int, int> {
+                .or_else([&](const int& err) -> Result<int, int> {
                     ++cnt;
-                    return AsyncError(err + 1);
+                    return Err(err + 1);
                 })
-                .or_else([&](Context& ctx, int& err) -> AsyncResult<int, int> {
+                .or_else([&](Context& ctx, int& err) -> Result<int, int> {
                     (void)ctx;
                     ++cnt;
-                    return AsyncError(err + 1);
+                    return Err(err + 1);
                 })
                 .or_else(
-                    [&](Context& ctx, const int& err) -> AsyncResult<int, int> {
+                    [&](Context& ctx, const int& err) -> Result<int, int> {
                         (void)ctx;
                         ++cnt;
-                        return AsyncError(err + 1);
+                        return Err(err + 1);
                     });
 
         auto result = p(ctx);
@@ -504,8 +504,8 @@ TEST(Promise, or_else) {
 TEST(Promise, inspect) {
     // Inspects without `Context&`
     {
-        auto promise = make_result_promise<int, std::string>(AsyncError("foo"s))
-                           .inspect([](AsyncResult<int, std::string>& result) {
+        auto promise = make_result_promise<int, std::string>(Err("foo"s))
+                           .inspect([](Result<int, std::string>& result) {
                                if (result.is_ok()) {
                                    result.value() = 42;
                                } else if (result.is_error()) {
@@ -520,9 +520,9 @@ TEST(Promise, inspect) {
     // Inspects with `Context&`
     {
         auto promise =
-            make_result_promise<int, std::string>(AsyncOk(42))
+            make_result_promise<int, std::string>(Ok(42))
                 .inspect([](Context& ctx,
-                            const AsyncResult<int, std::string>& result) {
+                            const Result<int, std::string>& result) {
                     (void)ctx;
                     EXPECT_TRUE(result.is_ok());
                     EXPECT_EQ(result.value(), 42);
@@ -535,7 +535,7 @@ TEST(Promise, inspect) {
 }
 
 TEST(Promise, discard_result) {
-    auto promise = make_result_promise<int, std::string>(AsyncError("oops"s))
+    auto promise = make_result_promise<int, std::string>(Err("oops"s))
                        .discard_result();
     auto result = promise(ctx);
     EXPECT_TRUE(result.is_ok());
@@ -549,13 +549,13 @@ TEST(Promise, join_promises) {
         make_ok_promise<int, int>(42),
         make_error_promise<char, char>('a').or_else([](const char& err) {
             (void)err;
-            return AsyncError('y');
+            return Err('y');
         }),
-        make_promise([&]() -> AsyncResult<std::string, int> {
+        make_promise([&]() -> Result<std::string, int> {
             if (++cnt == 2) {
-                return AsyncOk("oops"s);
+                return Ok("oops"s);
             }
-            return AsyncPending{};
+            return Pending{};
         }));
     EXPECT_TRUE(p);
 
@@ -582,16 +582,16 @@ TEST(Promise, join_promises_with_move_only_result) {
                       make_error_promise<int, std::unique_ptr<int>>(
                           std::make_unique<int>(11)))
             .then(
-                [](AsyncResult<
-                    std::tuple<AsyncResult<std::unique_ptr<int>, int>,
-                               AsyncResult<int, std::unique_ptr<int>>>,
-                    Void>& wrapper) -> AsyncResult<std::unique_ptr<int>, int> {
+                [](Result<
+                    std::tuple<Result<std::unique_ptr<int>, int>,
+                               Result<int, std::unique_ptr<int>>>,
+                    Void>& wrapper) -> Result<std::unique_ptr<int>, int> {
                     auto [r0, r1] = wrapper.take_value();
                     if (r0.is_ok() && r1.is_error()) {
                         int value = *r0.take_value() + *r1.take_error();
-                        return AsyncOk(std::make_unique<int>(value));
+                        return Ok(std::make_unique<int>(value));
                     }
-                    return AsyncError(-1);
+                    return Err(-1);
                 });
     EXPECT_TRUE(p);
 

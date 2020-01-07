@@ -12,14 +12,17 @@ licenses(["notice"])
 cc_library(
     name = "core",
     srcs = [
+        "logger.cpp",
     ],
     hdrs = [
+        "assert.hpp",
         "assume.hpp",
         "byteorder.hpp",
         "function.hpp",
         "function_ref.hpp",
         "internal/enable_special_members.hpp",
         "likely.hpp",
+        "logger.hpp",
         "movable.hpp",
         "option.hpp",
         "overload.hpp",
@@ -27,11 +30,13 @@ cc_library(
         "scope_guard.hpp",
         "thread_safety.hpp",
         "traits.hpp",
-        "try.hpp",
         "void.hpp",
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
+    deps = [
+        "@spdlog",
+    ],
 )
 
 cc_test(
@@ -40,12 +45,12 @@ cc_test(
         "tests/byteorder_test.cpp",
         "tests/function_ref_test.cpp",
         "tests/function_test.cpp",
+        "tests/logger_test.cpp",
         "tests/option_test.cpp",
         "tests/overload_test.cpp",
         "tests/result_test.cpp",
         "tests/scope_guard_test.cpp",
         "tests/traits_test.cpp",
-        "tests/try_test.cpp",
     ],
     copts = BIPOLAR_TEST_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,

@@ -9,15 +9,6 @@
 using namespace bipolar;
 using namespace std::literals;
 
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const Option<T>& opt) {
-    if (opt.has_value()) {
-        return os << "Some(" << opt.value() << ")";
-    } else {
-        return os << "None";
-    }
-}
-
 TEST(Option, ConstexprConstructible) {
     constexpr Option<int> opt(None);
     EXPECT_FALSE(opt.has_value());

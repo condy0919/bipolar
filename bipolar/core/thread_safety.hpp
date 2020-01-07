@@ -30,13 +30,13 @@
 ///
 ///   void ReaderUnlock() BIPOLAR_RELEASE_SHARED();
 ///
-///   bool TryLock() BIPOLAR_TRY_ACQUIRE();
+///   bool TryLock() BIPOLAR_TRY_ACQUIRE(true);
 ///
-///   bool ReaderTryLock() BIPOLAR_TRY_ACQUIRE_SHARED();
+///   bool ReaderTryLock() BIPOLAR_TRY_ACQUIRE_SHARED(true);
 ///
-///   void AssertHeld() BIPOLAR_ASSERT_CAPABILITY();
+///   void AssertHeld() BIPOLAR_ASSERT_CAPABILITY(this);
 ///
-///   void AssertReaderHeld() BIPOLAR_ASSERT_SHARED_CAPABILITY();
+///   void AssertReaderHeld() BIPOLAR_ASSERT_SHARED_CAPABILITY(this);
 /// };
 /// ```
 #define BIPOLAR_CAPABILITY(x)                                                  \

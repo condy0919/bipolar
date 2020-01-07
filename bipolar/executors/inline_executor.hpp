@@ -27,12 +27,12 @@ namespace bipolar {
 ///
 /// auto p = make_ok_promise<std::string, int>("inline")
 ///     .and_then([](const std::string& s) {
-///         return AsyncOk(s.size());
+///         return Ok(s.size());
 ///     })
-///     .then([](const AsyncResult<std::size_t, int>& result) {
+///     .then([](const Result<std::size_t, int>& result) {
 ///         assert(result.is_ok());
 ///         assert(result.value() == 6);
-///         return AsyncOk(Void{});
+///         return Ok(Void{});
 ///     });
 ///
 /// inline_executor.schedule_task(PendingTask(std::move(p)));

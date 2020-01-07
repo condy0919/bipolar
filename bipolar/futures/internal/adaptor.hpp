@@ -9,8 +9,8 @@
 
 #include "bipolar/core/movable.hpp"
 #include "bipolar/core/option.hpp"
+#include "bipolar/core/result.hpp"
 #include "bipolar/core/void.hpp"
-#include "bipolar/futures/async_result.hpp"
 #include "bipolar/futures/context.hpp"
 #include "bipolar/futures/traits.hpp"
 
@@ -98,7 +98,7 @@ private:
     Option<Handler> handler_;
 };
 
-// Wraps a handler function and adapts its return type to a `AsyncResult`
+// Wraps a handler function and adapts its return type to a `Result`
 // via its specializations
 template <typename Handler, typename T, typename E,
           typename ReturnType = boost::callable_traits::return_type_t<Handler>,
@@ -107,12 +107,12 @@ class ResultAdaptor;
 
 // NonCallableResultAdaptor
 //
-// Handlers returning `AsyncPending`, `AsyncOk`, `AsyncError`, or `AsyncResult`
+// Handlers returning `Pending`, `Ok`, `Err`, or `Result`
 // should inherit this base class
 template <typename Handler, typename T, typename E>
 class NonCallableResultAdaptor : public Movable {
 public:
-    using result_type = AsyncResult<T, E>;
+    using result_type = Result<T, E>;
 
     constexpr explicit NonCallableResultAdaptor(
         MoveOnlyHandler<Handler> handler)
@@ -128,33 +128,33 @@ private:
     MoveOnlyHandler<Handler> handler_;
 };
 
-// Supports handlers that return `AsyncPending`
+// Supports handlers that return `Pending`
 template <typename Handler, typename T, typename E>
-class ResultAdaptor<Handler, T, E, AsyncPending, false>
+class ResultAdaptor<Handler, T, E, Pending, false>
     : public NonCallableResultAdaptor<Handler, T, E> {
 public:
     using NonCallableResultAdaptor<Handler, T, E>::NonCallableResultAdaptor;
 };
 
-// Supports handlers that return `AsyncOk`
+// Supports handlers that return `Ok`
 template <typename Handler, typename T, typename E, typename U>
-class ResultAdaptor<Handler, T, E, AsyncOk<U>, false>
+class ResultAdaptor<Handler, T, E, Ok<U>, false>
     : public NonCallableResultAdaptor<Handler, U, E> {
 public:
     using NonCallableResultAdaptor<Handler, U, E>::NonCallableResultAdaptor;
 };
 
-// Supports handlers that return `AsyncError`
+// Supports handlers that return `Err`
 template <typename Handler, typename T, typename E, typename V>
-class ResultAdaptor<Handler, T, E, AsyncError<V>, false>
+class ResultAdaptor<Handler, T, E, Err<V>, false>
     : public NonCallableResultAdaptor<Handler, T, V> {
 public:
     using NonCallableResultAdaptor<Handler, T, V>::NonCallableResultAdaptor;
 };
 
-// Supports handlers that return `AsyncResult`
+// Supports handlers that return `Result`
 template <typename Handler, typename T, typename E, typename U, typename V>
-class ResultAdaptor<Handler, T, E, AsyncResult<U, V>, false>
+class ResultAdaptor<Handler, T, E, Result<U, V>, false>
     : public NonCallableResultAdaptor<Handler, U, V> {
 public:
     using NonCallableResultAdaptor<Handler, U, V>::NonCallableResultAdaptor;
@@ -178,7 +178,7 @@ public:
             handler_.reset();
         }
         if (!cont_) {
-            return AsyncPending{};
+            return Pending{};
         }
         return cont_(ctx);
     }
@@ -387,7 +387,7 @@ public:
 
     constexpr typename invoker_type::result_type operator()(Context& ctx) {
         if (!future_(ctx)) {
-            return AsyncPending{};
+            return Pending{};
         }
         return invoker_(ctx, future_.result());
     }
@@ -409,9 +409,9 @@ public:
 
     constexpr typename invoker_type::result_type operator()(Context& ctx) {
         if (!future_(ctx)) {
-            return AsyncPending{};
+            return Pending{};
         } else if (future_.is_error()) {
-            return AsyncError(future_.take_error());
+            return Err(future_.take_error());
         }
         return invoker_(ctx, future_.result());
     }
@@ -433,9 +433,9 @@ public:
 
     constexpr typename invoker_type::result_type operator()(Context& ctx) {
         if (!future_(ctx)) {
-            return AsyncPending{};
+            return Pending{};
         } else if (future_.is_ok()) {
-            return AsyncOk(future_.take_value());
+            return Ok(future_.take_value());
         }
         return invoker_(ctx, future_.result());
     }
@@ -479,11 +479,11 @@ public:
     constexpr explicit DiscardResultContinuation(Promise p)
         : promise_(std::move(p)) {}
 
-    constexpr AsyncResult<Void, Void> operator()(Context& ctx) {
+    constexpr Result<Void, Void> operator()(Context& ctx) {
         if (!promise_(ctx)) {
-            return AsyncPending{};
+            return Pending{};
         }
-        return AsyncOk(Void{});
+        return Ok(Void{});
     }
 
 private:
@@ -498,16 +498,16 @@ using PromiseContinuation = ContextHandlerInvoker<PromiseHandler>;
 template <typename T, typename E>
 class ResultContinuation {
 public:
-    constexpr explicit ResultContinuation(AsyncResult<T, E> result)
+    constexpr explicit ResultContinuation(Result<T, E> result)
         : result_(std::move(result)) {}
 
-    constexpr AsyncResult<T, E> operator()(Context& ctx) {
+    constexpr Result<T, E> operator()(Context& ctx) {
         (void)ctx;
         return std::move(result_);
     }
 
 private:
-    AsyncResult<T, E> result_;
+    Result<T, E> result_;
 };
 
 // The continuation produced by `join_promises()`
@@ -524,14 +524,13 @@ public:
 private:
     template <std::size_t... Is>
     constexpr auto helper(Context& ctx, std::index_sequence<Is...>)
-        -> AsyncResult<std::tuple<typename Promises::result_type...>, Void> {
+        -> Result<std::tuple<typename Promises::result_type...>, Void> {
         bool comps[] = {std::get<Is>(futures_)(ctx)...};
         if (std::all_of(std::begin(comps), std::end(comps),
                         [](bool b) { return b; })) {
-            return AsyncOk(
-                std::make_tuple(std::get<Is>(futures_).take_result()...));
+            return Ok(std::make_tuple(std::get<Is>(futures_).take_result()...));
         }
-        return AsyncPending{};
+        return Pending{};
     }
 
 private:
@@ -546,7 +545,7 @@ public:
         : promises_(std::move(promises)), results_(promises_.size()) {}
 
     constexpr auto operator()(Context& ctx)
-        -> AsyncResult<std::vector<typename Promise::result_type>, Void> {
+        -> Result<std::vector<typename Promise::result_type>, Void> {
         bool done = true;
         for (std::size_t i = 0; i < promises_.size(); ++i) {
             if (!results_[i]) {
@@ -556,9 +555,9 @@ public:
         }
 
         if (done) {
-            return AsyncOk(std::move(results_));
+            return Ok(std::move(results_));
         }
-        return AsyncPending{};
+        return Pending{};
     }
 
 private:

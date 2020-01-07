@@ -7,7 +7,7 @@ build:kcov -c dbg
 build:kcov --spawn_strategy=standalone
 build:kcov --run_under //tools/dynamic_analysis:kcov
 build:kcov --local_test_jobs=1
-build:kcov --test_tag_filters=-benchmark
+build:kcov --test_tag_filters=-benchmark,-example
 build:kcov --nocache_test_results
 # These increased timeouts were set through experimentation. Because kcov runs
 # in a separate process from the main program, the OS has to context-switch

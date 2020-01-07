@@ -52,26 +52,27 @@ struct GameState {
 // This function demonstrates returning pending, error, and ok state
 // as well as task suspension.
 auto roll_die(std::string player, std::string type, int number_of_sides) {
-    return make_promise([player, type, number_of_sides](
-                            Context& ctx) -> AsyncResult<int, Void> {
-        // Simulate the outcode of rolling a die.
-        // Either the die will settle, keel rolling, or fall off the table.
-        const int event = random() % 6;
-        if (event == 0) {
-            std::printf("%s's '%s' die flew right off the table!\n",
-                        player.c_str(), type.c_str());
-            return AsyncError(Void{});
-        } else if (event < 3) {
-            // The die is still rolling around. Need to wait for it to settle
-            resume_in_a_little_while(ctx.suspend_task());
-            return AsyncPending{};
-        }
+    return make_promise(
+        [player, type, number_of_sides](Context& ctx) -> Result<int, Void> {
+            // Simulate the outcode of rolling a die.
+            // Either the die will settle, keel rolling, or fall off the table.
+            const int event = random() % 6;
+            if (event == 0) {
+                std::printf("%s's '%s' die flew right off the table!\n",
+                            player.c_str(), type.c_str());
+                return Err(Void{});
+            } else if (event < 3) {
+                // The die is still rolling around. Need to wait for it to
+                // settle
+                resume_in_a_little_while(ctx.suspend_task());
+                return Pending{};
+            }
 
-        const int value = random() % number_of_sides;
-        std::printf("%s rolled %d for '%s'\n", player.c_str(), value,
-                    type.c_str());
-        return AsyncOk(value);
-    });
+            const int value = random() % number_of_sides;
+            std::printf("%s rolled %d for '%s'\n", player.c_str(), value,
+                        type.c_str());
+            return Ok(value);
+        });
 }
 
 // Re-rolls a die until it succeeds.
@@ -96,60 +97,61 @@ Promise<int, Void> roll_die_until_successful(std::string player,
 // `Future` so that its result can be retained and repeatedly examined
 // while awaiting other tasks.
 Promise<int, Void> roll_for_damage(std::string player) {
-    return make_promise([player,
-                         damage = Future<int, Void>(
-                             roll_die_until_successful(player, "damage", 10)),
-                         effect = Future<int, Void>(
-                             roll_die_until_successful(player, "effect", 4)),
-                         effect_multiplier = Future<int, Void>()](
-                            Context& ctx) mutable -> AsyncResult<int, Void> {
-        // Evaluate the damage die roll future
-        const bool damage_ready = damage(ctx);
+    return make_promise(
+        [player,
+         damage =
+             Future<int, Void>(roll_die_until_successful(player, "damage", 10)),
+         effect =
+             Future<int, Void>(roll_die_until_successful(player, "effect", 4)),
+         effect_multiplier =
+             Future<int, Void>()](Context& ctx) mutable -> Result<int, Void> {
+            // Evaluate the damage die roll future
+            const bool damage_ready = damage(ctx);
 
-        // Evaluate the effect die roll future
-        // If the player rolled lightning, begin rolling the multiplier
-        bool effect_ready = effect(ctx);
-        if (effect_ready) {
-            if (effect.value() == 0) {
-                if (!effect_multiplier) {
-                    effect_multiplier =
-                        roll_die_until_successful(player, "multiplier", 4);
+            // Evaluate the effect die roll future
+            // If the player rolled lightning, begin rolling the multiplier
+            bool effect_ready = effect(ctx);
+            if (effect_ready) {
+                if (effect.value() == 0) {
+                    if (!effect_multiplier) {
+                        effect_multiplier =
+                            roll_die_until_successful(player, "multiplier", 4);
+                    }
+                    effect_ready = effect_multiplier(ctx);
                 }
-                effect_ready = effect_multiplier(ctx);
             }
-        }
 
-        // If we're still waiting for the dice to settle, return pending
-        // The task will be resumed once it can make progress
-        if (!effect_ready || !damage_ready) {
-            return AsyncPending{};
-        }
+            // If we're still waiting for the dice to settle, return pending
+            // The task will be resumed once it can make progress
+            if (!effect_ready || !damage_ready) {
+                return Pending{};
+            }
 
-        // Calculate the result and describe what happened
-        if (damage.value() == 0) {
-            std::printf(
-                "%s swings wildling and completely miss their opponent\n",
-                player.c_str());
-        } else {
-            std::printf("%s hits their opponent for %d damage\n",
-                        player.c_str(), damage.value());
-        }
-
-        int effect_bonus = 0;
-        if (effect.value() == 0) {
-            if (effect_bonus == 0) {
-                std::printf("%s attempts to cast lignting but the spell "
-                            "fizzles without effect\n",
-                            player.c_str());
+            // Calculate the result and describe what happened
+            if (damage.value() == 0) {
+                std::printf(
+                    "%s swings wildling and completely miss their opponent\n",
+                    player.c_str());
             } else {
-                effect_bonus = effect_multiplier.value() * 2 + 3;
-                std::printf("%s casts ligntning for %d damage\n",
-                            player.c_str(), effect_bonus);
+                std::printf("%s hits their opponent for %d damage\n",
+                            player.c_str(), damage.value());
             }
-        }
 
-        return AsyncOk(damage.value() + effect_bonus);
-    });
+            int effect_bonus = 0;
+            if (effect.value() == 0) {
+                if (effect_bonus == 0) {
+                    std::printf("%s attempts to cast lignting but the spell "
+                                "fizzles without effect\n",
+                                player.c_str());
+                } else {
+                    effect_bonus = effect_multiplier.value() * 2 + 3;
+                    std::printf("%s casts ligntning for %d damage\n",
+                                player.c_str(), effect_bonus);
+                }
+            }
+
+            return Ok(damage.value() + effect_bonus);
+        });
 }
 
 // Plays one round of the game.
@@ -160,8 +162,8 @@ Promise<int, Void> roll_for_damage(std::string player) {
 // tasks as a new task which produce a tuple
 auto play_round(std::shared_ptr<GameState> state) {
     return join_promises(roll_for_damage("Red"), roll_for_damage("Blue"))
-        .and_then([state](const std::tuple<AsyncResult<int, Void>,
-                                           AsyncResult<int, Void>>& damages) {
+        .and_then([state](const std::tuple<Result<int, Void>,
+                                           Result<int, Void>>& damages) {
             // damage tallies are ready, apply them to the game state
             state->blue_hp =
                 std::max(0, state->blue_hp - std::get<0>(damages).value());
@@ -169,7 +171,7 @@ auto play_round(std::shared_ptr<GameState> state) {
                 std::max(0, state->red_hp - std::get<1>(damages).value());
             std::printf("Hit-points remaining: red %d, blue %d\n",
                         state->red_hp, state->blue_hp);
-            return AsyncOk(Void{});
+            return Ok(Void{});
         });
 }
 
@@ -182,13 +184,13 @@ static auto play_game() {
     std::printf("Red and blue are playing a game...\n");
     return make_promise(
         [state = std::make_shared<GameState>(), round = Future<Void, Void>()](
-            Context& ctx) mutable -> AsyncResult<Void, Void> {
+            Context& ctx) mutable -> Result<Void, Void> {
             while (state->red_hp != 0 && state->blue_hp != 0) {
                 if (!round) {
                     round = play_round(state);
                 }
                 if (!round(ctx)) {
-                    return AsyncPending{};
+                    return Pending{};
                 }
                 round = nullptr;
             }
@@ -202,7 +204,7 @@ static auto play_game() {
             } else {
                 std::printf("Blue wins!\n");
             }
-            return AsyncOk(Void{});
+            return Ok(Void{});
         });
 }
 

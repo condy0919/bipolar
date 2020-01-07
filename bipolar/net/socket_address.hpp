@@ -28,6 +28,9 @@ enum class SocketAddressFormatError {
 ///
 /// An internet socket address, either IPv4 or IPv6.
 ///
+/// Provides an unspecified `IPAddress` to construct an unspecified
+/// `SocketAddress` whose port number is meaningless.
+///
 /// Internet socket addresses consist of an IP address, a 16-bit port number,
 /// as well as possibly some version-dependent additional information.
 ///
@@ -58,7 +61,7 @@ public:
     /// assert(addr.addr() == (IPAddress(IPv4Address(127, 0, 0, 1))));
     /// ```
     constexpr SocketAddress(IPAddress addr, std::uint16_t port) noexcept
-        : addr_(std::move(addr)), port_(port) {}
+        : addr_(addr), port_(port) {}
 
     /// Creates a new `SocketAddress` from the native `sockaddr_in` type
     constexpr explicit SocketAddress(const struct sockaddr_in* addr) noexcept
@@ -78,7 +81,7 @@ public:
     ///
     /// assert(addr.addr() == (IPAddress(IPv4Address(127, 0, 0, 1))));
     /// ```
-    constexpr const IPAddress& addr() const noexcept {
+    [[nodiscard]] constexpr const IPAddress& addr() const noexcept {
         return addr_;
     }
 
@@ -109,7 +112,7 @@ public:
     ///
     /// assert(addr.port() == 0);
     /// ```
-    constexpr std::uint16_t port() const noexcept {
+    [[nodiscard]] constexpr std::uint16_t port() const noexcept {
         return port_;
     }
 
@@ -174,10 +177,10 @@ public:
     ///                  hton(static_cast<std::uint16_t>(8086)));
     /// assert(a2.str() == "[::]:8086");
     /// ```
-    std::string str() const;
+    [[nodiscard]] std::string str() const;
 
     /// Converts to sockaddr to communicate with system calls
-    constexpr struct sockaddr_storage to_sockaddr() const {
+    [[nodiscard]] constexpr struct sockaddr_storage to_sockaddr() const {
         return addr_.to_sockaddr(port_);
     }
 

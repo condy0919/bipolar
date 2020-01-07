@@ -42,29 +42,42 @@ jobs:
 
       - name: Installing bazel
         run: |
-          bazel_version=1.2.1
+          bazel_version=2.0.0
           curl -OL https://github.com/bazelbuild/bazel/releases/download/${bazel_version}/bazel-${bazel_version}-installer-linux-x86_64.sh
           chmod +x bazel-${bazel_version}-installer-linux-x86_64.sh
           ./bazel-${bazel_version}-installer-linux-x86_64.sh
           rm ./bazel-${bazel_version}-installer-linux-x86_64.sh
           bazel --version
 
-      - name: Installing kcov
+      - name: Installing packages
         run: |
           apt update
           apt install -y binutils-dev libcurl4-openssl-dev zlib1g-dev libdw-dev libiberty-dev cmake
+
+      - name: Caching kcov binary files
+        id: kcov-cache
+        uses: actions/cache@v1
+        with:
+          path: kcov
+          key: kcov-installed
+
+      - name: Building kcov binary files
+        if: steps.kcov-cache.outputs.cache-hit != 'true'
+        run: |
           git clone https://github.com/SimonKagstrom/kcov
-          (cd kcov; cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release; cd build; make install)
-          rm kcov -rf
+          (cd kcov; cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release; cmake --build build)
+
+      - name: Deploying kcov binary files
+        run: (cd kcov; cd build; make install)
 
       - name: Building
         run: bazel build //...
 
       - name: Testing
-        run: bazel test //... --test_tag_filters='-io_uring,-benchmark' --test_output=errors
+        run: bazel test //... --test_tag_filters='-io_uring,-benchmark,-example' --test_output=errors
 
       - name: Testing with code coverage reports
-        run: bazel test --config=kcov //... --test_tag_filters='-io_uring,-benchmark'
+        run: bazel test --config=kcov //... --test_tag_filters='-io_uring,-benchmark,-example'
 
       - uses: codecov/codecov-action@v1.0.3
         with:

@@ -8,6 +8,8 @@ def bipolar_dependencies():
     _com_github_google_googletest()
     _com_github_google_benchmark()
     _com_github_axboe_liburing()
+    _com_github_fmtlib_fmt()
+    _com_github_gabime_spdlog()
 
 def _com_github_google_googletest():
     git_repository(
@@ -32,4 +34,20 @@ def _com_github_axboe_liburing():
         remote = "https://github.com/axboe/liburing",
         commit = "556960942eaa69fd53544932f00db3fa9f196e00",
         build_file = "@bipolar//bazel/external:liburing.BUILD",
+    )
+
+def _com_github_fmtlib_fmt():
+    new_git_repository(
+        name = "fmtlib",
+        remote = "https://github.com/fmtlib/fmt",
+        tag = "6.1.1",
+        build_file = "@bipolar//bazel/external:fmtlib.BUILD",
+    )
+
+def _com_github_gabime_spdlog():
+    new_git_repository(
+        name = "spdlog",
+        remote = "https://github.com/gabime/spdlog",
+        tag = "v1.4.2",
+        build_file = "@bipolar//bazel/external:spdlog.BUILD",
     )

@@ -16,7 +16,6 @@ cc_library(
         "single_threaded_executor.cpp",
     ],
     hdrs = [
-        "async_result.hpp",
         "context.hpp",
         "executor.hpp",
         "future_inl.hpp",
@@ -40,7 +39,6 @@ cc_library(
 cc_test(
     name = "futures_test",
     srcs = [
-        "tests/async_result_test.cpp",
         "tests/future_test.cpp",
         "tests/pending_task_test.cpp",
         "tests/promise_test.cpp",

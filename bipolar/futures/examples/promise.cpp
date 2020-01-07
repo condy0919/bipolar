@@ -18,8 +18,8 @@ static void resume_in_a_little_while(SuspendedTask task) {
 }
 
 static Promise<int, std::string> pick_peaches(int hours) {
-    return make_promise([hours, time = 0, harvest = 0](Context& ctx) mutable
-                        -> AsyncResult<int, std::string> {
+    return make_promise([hours, time = 0, harvest = 0](
+                            Context& ctx) mutable -> Result<int, std::string> {
         if (time == 0) {
             std::printf("Starting the day picking peaches for %d hours...\n",
                         hours);
@@ -28,15 +28,14 @@ static Promise<int, std::string> pick_peaches(int hours) {
         }
 
         if (random() % 7 == 0) {
-            return AsyncError(
-                "A wild animal ate all the peaches we picked today!"s);
+            return Err("A wild animal ate all the peaches we picked today!"s);
         }
         if (time < hours) {
             // Simulate time passing.
             // Here we call `suspend_task()` to obtain a `SuspendedTask`
             // which acts as a handle wihch will later be used by
             // `resume_in_a_little_while()` to resume the task. In the
-            // meantime, we unwind the call stack by returning `AsyncPending`.
+            // meantime, we unwind the call stack by returning `Pending`.
             // Once the task is resumed, the promise's handler will restart
             // execution from the top again, However it will have retained
             // state (in `time` and `harvest`) from its prior execution.
@@ -44,36 +43,36 @@ static Promise<int, std::string> pick_peaches(int hours) {
             ++time;
             harvest += static_cast<int>(random() % 31);
         }
-        return AsyncOk(harvest);
+        return Ok(harvest);
     });
 }
 
 static Promise<Void, std::string> eat_peaches(int appetite) {
     return make_promise(
-        [appetite](Context& ctx) mutable -> AsyncResult<Void, std::string> {
+        [appetite](Context& ctx) mutable -> Result<Void, std::string> {
             if (appetite > 0) {
                 std::printf("... eating a yummy peach...\n");
                 resume_in_a_little_while(ctx.suspend_task());
                 --appetite;
                 if (random() % 11 == 0) {
-                    return AsyncError("I ate too many peaches. Urp"s);
+                    return Err("I ate too many peaches. Urp"s);
                 }
-                return AsyncPending{};
+                return Pending{};
             }
             std::printf("Ahh. So satisfying\n");
-            return AsyncOk(Void{});
+            return Ok(Void{});
         });
 }
 
 static Promise<Void, Void> prepare_simulation() {
     const int hours = static_cast<int>(random() % 8);
     return pick_peaches(hours)
-        .and_then([](const int& harvest) -> AsyncResult<int, std::string> {
+        .and_then([](const int& harvest) -> Result<int, std::string> {
             std::printf("We picked %d peaches today!\n", harvest);
             if (harvest == 0) {
-                return AsyncError("What will we eat now?"s);
+                return Err("What will we eat now?"s);
             }
-            return AsyncOk(harvest);
+            return Ok(harvest);
         })
         .and_then([](const int& harvest) {
             int appetite = static_cast<int>(random() % 7);
@@ -84,11 +83,11 @@ static Promise<Void, Void> prepare_simulation() {
         })
         .or_else([](const std::string& error) {
             std::printf("Oh no! %s\n", error.c_str());
-            return AsyncError(Void{});
+            return Err(Void{});
         })
         .and_then([](Void&) {
             std::printf("*** Simulation finished ***\n");
-            return AsyncOk(Void{});
+            return Ok(Void{});
         })
         .or_else([](Void&) {
             std::printf("*** Restarting simulation ***\n");

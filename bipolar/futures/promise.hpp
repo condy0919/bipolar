@@ -12,9 +12,9 @@
 #include "bipolar/core/function.hpp"
 #include "bipolar/core/movable.hpp"
 #include "bipolar/core/option.hpp"
+#include "bipolar/core/result.hpp"
 #include "bipolar/core/traits.hpp"
 #include "bipolar/core/void.hpp"
-#include "bipolar/futures/async_result.hpp"
 #include "bipolar/futures/context.hpp"
 #include "bipolar/futures/internal/adaptor.hpp"
 #include "bipolar/futures/traits.hpp"
@@ -119,10 +119,10 @@ constexpr PromiseImpl<Continuation> with_continuation(Continuation);
 ///
 /// During each invocation, the executor passes the continuation an execution
 /// context object represented by a subclass of `Context`. The continuation
-/// attempts to make progress then returns a value of type `AsyncResult` to
-/// indicate whether it completed successfully (signaled by `AsyncOk`), failed
-/// with an error (signaled by `AsyncError`), or was unable to complete the task
-/// during that invocation (signaled by `AsyncPending`).
+/// attempts to make progress then returns a value of type `Result` to
+/// indicate whether it completed successfully (signaled by `Ok`), failed
+/// with an error (signaled by `Error`), or was unable to complete the task
+/// during that invocation (signaled by `Pending`).
 /// For example, a continuation may be unable to complete the task if it must
 /// asynchronously await completion of an IO or IPC operation before it can
 /// proceed any futher.
@@ -132,7 +132,7 @@ constexpr PromiseImpl<Continuation> with_continuation(Continuation);
 /// The continuation then arranges for the task to be resumed asynchronously
 /// (with `SuspendedTask::resume_task()`) once it becomes possible for the
 /// promise to make forward progress again. Finally, the continuation returns
-/// `AsyncPending` to indicate to the executor that it was unable to complete
+/// `Pending` to indicate to the executor that it was unable to complete
 /// the task during that invocation.
 ///
 /// When the executor receives a pending result from a task's continuation, it
@@ -158,7 +158,7 @@ constexpr PromiseImpl<Continuation> with_continuation(Continuation);
 /// You can recognize boxed and unboxed promise by their types.
 /// Here are two examples:
 /// - A boxed promise type: `Promise<Void, Void>` which is an alias for
-///  `PromiseImpl<Function<AsyncResult<Void, Void>(Context&)>>`
+///  `PromiseImpl<Function<Result<Void, Void>(Context&)>>`
 /// - A unboxed promise type: `PromiseImpl<internal::ThenContinuation<...>>`
 ///
 /// Although boxed promises are easier to manipulate, they may cause the
@@ -180,16 +180,16 @@ constexpr PromiseImpl<Continuation> with_continuation(Continuation);
 /// allocation)
 ///
 /// ```
-/// Promise<Void, Void> = make_promise([]() -> AsyncResult<Void, Void> { ... })
-///     .then([](AsyncResult<Void, Void>& result) { ... })
+/// Promise<Void, Void> = make_promise([]() -> Result<Void, Void> { ... })
+///     .then([](Result<Void, Void>& result) { ... })
 ///     .and_then([]() { ... });
 /// ```
 ///
 /// Or this: (still only performs at most one heap allocation)
 ///
 /// ```
-/// auto f = make_promise([]() -> AsyncResult<Void, Void> { ... });
-/// auto g = f.then([](AsyncResult<Void, Void>& result) { ... });
+/// auto f = make_promise([]() -> Result<Void, Void> { ... });
+/// auto g = f.then([](Result<Void, Void>& result) { ... });
 /// auto h = g.and_then([]() { ... });
 /// auto boxed_h = h.box();
 /// ```
@@ -235,7 +235,7 @@ constexpr PromiseImpl<Continuation> with_continuation(Continuation);
 /// ownership model, greatly simplifies the implementation of thread pool
 /// based executors.
 ///
-/// # Result retention and AsyncResult
+/// # Result retention and Result
 ///
 /// A promise's continuation can only be executed to completion once.
 /// After it completes, it cannot be run again.
@@ -264,13 +264,13 @@ constexpr PromiseImpl<Continuation> with_continuation(Continuation);
 /// https://en.wikipedia.org/wiki/Futures_and_promises
 ///
 template <typename T = Void, typename E = Void>
-using Promise = PromiseImpl<Function<AsyncResult<T, E>(Context&)>>;
+using Promise = PromiseImpl<Function<Result<T, E>(Context&)>>;
 
 /// See documentation of `Promise` for more information
 template <typename Continuation>
 class PromiseImpl final : public Movable {
     // A continuation is a callable object with this signature:
-    // AsyncResult<T, E>(Context&)
+    // Result<T, E>(Context&)
     static_assert(is_continuation_v<Continuation>,
                   "Continuation type in invalid");
 
@@ -279,7 +279,7 @@ class PromiseImpl final : public Movable {
 
 public:
     /// The promise's result type.
-    /// Equivalent to `AsyncResult<T, E>`
+    /// Equivalent to `Result<T, E>`
     using result_type = typename continuation_traits<Continuation>::result_type;
 
     /// The type of value produced when the promise completes successfully
@@ -387,21 +387,21 @@ public:
     /// after this promise completes (successfully or unsuccessfully), passing
     /// its result.
     ///
-    /// The received result's state is guaranteed to be either `AsyncOk` or
-    /// `AsyncError`, never `AsyncPending`.
+    /// The received result's state is guaranteed to be either `Ok` or
+    /// `Err`, never `Pending`.
     ///
     /// `handler` is a callable object (such as a lambda) which consumes the
     /// result of this promise and returns a new result with any value type
     /// and error type.
     ///
     /// The handler must return one of the following types:
-    /// - AsyncResult<new_value_type, new_error_type>
-    /// - AsyncOk<new_value_type>
-    /// - AsyncError<new_error_type>
-    /// - AsyncPending
+    /// - Result<new_value_type, new_error_type>
+    /// - Ok<new_value_type>
+    /// - Err<new_error_type>
+    /// - Pending
     /// - Promise<new_value_type, new_error_type>
     /// - any callable or unboxed promise with the following signature:
-    ///   AsyncResult<new_value_type, new_error_type>(Context&)
+    ///   Result<new_value_type, new_error_type>(Context&)
     ///
     /// The handler must accept one of the following argument lists:
     /// - (result_type&)
@@ -416,21 +416,21 @@ public:
     ///
     /// ```
     /// auto f = make_promise(...)
-    ///     .then([](AsyncResult<int, std::string>& result)
-    ///              -> AsyncResult<std::string, Void> {
+    ///     .then([](Result<int, std::string>& result)
+    ///              -> Result<std::string, Void> {
     ///         if (result.is_ok()) {
     ///             printf("received value: %d\n", result.value());
     ///             if (result.value() % 15 == 0) {
-    ///                 return AsyncOk{"fizzbuzz"s};
+    ///                 return Ok{"fizzbuzz"s};
     ///             } else if (result.value() % 3 == 0) {
-    ///                 return AsyncOk{"fizz"s};
+    ///                 return Ok{"fizz"s};
     ///             } else if (result.value() % 5 == 0) {
-    ///                 return AsyncOk{"buzz"s};
+    ///                 return Ok{"buzz"s};
     ///             }
-    ///             return AsyncOk{std::to_string(result.value())};
+    ///             return Ok{std::to_string(result.value())};
     ///         } else {
     ///             printf("received error: %s\n", result.error().c_str());
-    ///             return AsyncError{Void{}};
+    ///             return Err{Void{}};
     ///         }
     ///     })
     ///     .then(...);
@@ -454,13 +454,13 @@ public:
     /// but the same error type.
     ///
     /// The handler must return one of the following types:
-    /// - AsyncResult<new_value_type, error_type>
-    /// - AsyncOk<new_value_type>
-    /// - AsyncError<error_type>
-    /// - AsyncPending
+    /// - Result<new_value_type, error_type>
+    /// - Ok<new_value_type>
+    /// - Err<error_type>
+    /// - Pending
     /// - Promise<new_value_type, error_type>
     /// - any callable or unboxed promise with the following signature:
-    ///   AsyncResult<new_value_type, error_type>(Context&)
+    ///   Result<new_value_type, error_type>(Context&)
     ///
     /// The handler must accept one of the following argument lists:
     /// - (value_type&)
@@ -478,13 +478,13 @@ public:
     ///     .and_then([](const int& value) {
     ///         printf("received value: %d\n", value);
     ///         if (value % 15 == 0) {
-    ///             return AsyncOk{"fizzbuzz"s};
+    ///             return Ok{"fizzbuzz"s};
     ///         } else if (value % 3 == 0) {
-    ///             return AsyncOk{"fizz"s};
+    ///             return Ok{"fizz"s};
     ///         } else if (value % 5 == 0) {
-    ///             return AsyncOk{"buzz"s};
+    ///             return Ok{"buzz"s};
     ///         }
-    ///         return AsyncOk{std::to_string(value)};
+    ///         return Ok{std::to_string(value)};
     ///     })
     ///     .then(...);
     /// ```
@@ -507,13 +507,13 @@ public:
     /// but the same value type.
     ///
     /// The handler must returns one of the following types:
-    /// - AsyncResult<value_type, new_error_type>
-    /// - AsyncOk<value_type>
-    /// - AsyncError<new_error_type>
-    /// - AsyncPending
+    /// - Result<value_type, new_error_type>
+    /// - Ok<value_type>
+    /// - Error<new_error_type>
+    /// - Pending
     /// - Promise<value_type, new_error_type>
     /// - any callable or unboxed promise with the following signature:
-    ///   AsyncResult<value_type, new_error_type>(Context&)
+    ///   Result<value_type, new_error_type>(Context&)
     ///
     /// The handler must accept one of the following argument lists:
     /// - (error_type&)
@@ -528,9 +528,9 @@ public:
     ///
     /// ```
     /// auto f = make_promise(...)
-    ///     .or_else([](const std::string& error) -> AsyncResult<int, Void> {
+    ///     .or_else([](const std::string& error) -> Result<int, Void> {
     ///         printf("received error: %s\n", error.c_str());
-    ///         return AsyncError{Void{}};
+    ///         return Err{Void{}};
     ///     })
     ///     .then(...);
     /// ```
@@ -576,7 +576,7 @@ public:
     ///
     /// ```
     /// auto f = make_promise(...)
-    ///     .inspect([](const AsyncResult<int, std::string>& result) {
+    ///     .inspect([](const Result<int, std::string>& result) {
     ///         if (result.is_ok()) {
     ///             printf("received value: %d\n", result.value());
     ///         } else {
@@ -602,7 +602,7 @@ public:
 
     /// Returns an unboxed promise which discards the result of this promise
     /// once it completes, thereby always producing a successful result of type
-    /// `AsyncResult<Void, Void>` regardless of whether this promise succeed or
+    /// `Result<Void, Void>` regardless of whether this promise succeed or
     /// failed.
     ///
     /// Asserts that the promise is non-empty.
@@ -649,9 +649,9 @@ public:
     /// // sequential work with the sequencer.
     /// Promise<Void, Void> perform_complex_task() {
     ///     return make_promise([]() { /* do sequential work */ })
-    ///         .then([](AsyncResult<Void, Void>& result) { /* wrapped */ })
+    ///         .then([](Result<Void, Void>& result) { /* wrapped */ })
     ///         .wrap_with(seq)
-    ///         .then([](AsyncResult<Void, Void>& result) { /* more */ });
+    ///         .then([](Result<Void, Void>& result) { /* more */ });
     /// }
     /// ```
     ///
@@ -664,7 +664,7 @@ public:
     /// Promise<Void, Void> perform_complex_task() {
     ///     return seq.wrap(
     ///             make_promise([]() { /* sequential work */ })
-    ///         ).then([](AsyncResult<Void, Void>& result) { /* more */ });
+    ///         ).then([](Result<Void, Void>& result) { /* more */ });
     /// }
     /// ```
     template <typename Wrapper, typename... Args>
@@ -758,13 +758,13 @@ constexpr bool operator!=(std::nullptr_t,
 /// `handler` is a callable object (such as a lambda).
 ///
 /// The handler must return one of the following types:
-/// - AsyncResult<T, E>
-/// - AsyncOk<T>
-/// - AsyncError<E>
-/// - AsyncPending
+/// - Result<T, E>
+/// - Ok<T>
+/// - Error<E>
+/// - Pending
 /// - Promise<T, E>
 /// - any callable or unboxed promise with the following signature:
-///   `AsyncResult<T, E>(Context&)`
+///   `Result<T, E>(Context&)`
 ///
 /// The handler must accept one of the following argument lists:
 /// - ()
@@ -790,19 +790,19 @@ constexpr bool operator!=(std::nullptr_t,
 ///
 /// Promise<WeatherType, std::string> wait_for_good_weather(int max_days) {
 ///     return make_promise([days_left = max_days](Context& ctx) mutable
-///                     -> AsyncResult<WeatherType, std::string> {
+///                     -> Result<WeatherType, std::string> {
 ///         WeatherType weather = look_outside();
 ///         if ((weather == WeatherType::SUNNY) ||
 ///             (weather == WeatherType::GLORIOUS)) {
-///             return AsyncOk(weather);
+///             return Ok(weather);
 ///         }
 ///
 ///         if (days_left > 0) {
 ///             wait_for_tomorrow(ctx.suspend_task());
-///             return AsyncPending{};
+///             return Pending{};
 ///         }
 ///         --days_left;
-///         return AsyncError("nothing but grey skies"s);
+///         return Err("nothing but grey skies"s);
 ///     });
 /// }
 ///
@@ -827,12 +827,12 @@ constexpr auto make_promise(PromiseHandler handler) {
 /// This function is especially useful for returning promise from functions
 /// that have multiple branches some of which complete synchronously.
 template <typename T, typename E>
-constexpr auto make_result_promise(AsyncResult<T, E>&& result) {
+constexpr auto make_result_promise(Result<T, E>&& result) {
     return PromiseImpl(internal::ResultContinuation<T, E>(std::move(result)));
 }
 
 template <typename T, typename E>
-constexpr auto make_result_promise(const AsyncResult<T, E>& result) {
+constexpr auto make_result_promise(const Result<T, E>& result) {
     return PromiseImpl(internal::ResultContinuation<T, E>(result));
 }
 
@@ -845,12 +845,12 @@ constexpr auto make_result_promise(const AsyncResult<T, E>& result) {
 /// that have multiple branches some of which complete synchronously.
 template <typename T, typename E>
 constexpr auto make_ok_promise(T&& value) {
-    return make_result_promise<T, E>(AsyncOk(std::move(value)));
+    return make_result_promise<T, E>(Ok(std::move(value)));
 }
 
 template <typename T, typename E>
 constexpr auto make_ok_promise(const T& value) {
-    return make_result_promise<T, E>(AsyncOk(value));
+    return make_result_promise<T, E>(Ok(value));
 }
 
 /// make_error_promise
@@ -862,12 +862,12 @@ constexpr auto make_ok_promise(const T& value) {
 /// that have multiple branches some of which complete synchronously.
 template <typename T, typename E>
 constexpr auto make_error_promise(E&& error) {
-    return make_result_promise<T, E>(AsyncError(std::move(error)));
+    return make_result_promise<T, E>(Err(std::move(error)));
 }
 
 template <typename T, typename E>
 constexpr auto make_error_promise(const E& error) {
-    return make_result_promise<T, E>(AsyncError(error));
+    return make_result_promise<T, E>(Err(error));
 }
 
 /// join_promises
@@ -887,10 +887,10 @@ constexpr auto make_error_promise(const E& error) {
 ///     auto f = get_random_number();
 ///     auto g = get_random_number();
 ///     return join_promises(std::move(f), std::move(g))
-///         .and_then([](std::tuple<AsyncResult<int, int>,
-///                                 AsyncResult<int, int>>& results) {
+///         .and_then([](std::tuple<Result<int, int>,
+///                                 Result<int, int>>& results) {
 ///             auto& [r0, r1] = results;
-///             return AsyncOk(r0.value() + r1.value);
+///             return Ok(r0.value() + r1.value);
 ///         });
 /// }
 /// ```
@@ -918,8 +918,8 @@ constexpr auto join_promises(Promises... promises) {
 ///     promises.push_back(get_random_number());
 ///     promises.push_back(get_random_number());
 ///     return join_promise_vector(std::move(promises))
-///         .and_then([](std::vector<AsyncResult<int, int>>& results) {
-///             return AsyncOk(results[0].value() + results[1].value());
+///         .and_then([](std::vector<Result<int, int>>& results) {
+///             return Ok(results[0].value() + results[1].value());
 ///         });
 /// }
 /// ```
