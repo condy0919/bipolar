@@ -20,6 +20,7 @@ cc_library(
         "byteorder.hpp",
         "function.hpp",
         "function_ref.hpp",
+        "hash.hpp",
         "internal/enable_special_members.hpp",
         "likely.hpp",
         "logger.hpp",

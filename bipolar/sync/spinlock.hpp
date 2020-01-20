@@ -17,7 +17,7 @@ namespace bipolar {
 ///
 /// `xchg` is cheaper than `cmpxchg` on most platforms.
 ///
-/// See [it](https://www.agner.org/optimize/instruction_tables.pdf) for details.
+/// See https://www.agner.org/optimize/instruction_tables.pdf for details.
 class BIPOLAR_CAPABILITY("mutex") SpinLock final : public boost::noncopyable {
 public:
     constexpr SpinLock() noexcept : locked_(0) {}

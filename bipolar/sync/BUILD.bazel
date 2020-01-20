@@ -16,6 +16,7 @@ cc_library(
     hdrs = [
         "barrier.hpp",
         "spinlock.hpp",
+        "spinlock_pool.hpp",
     ],
     copts = BIPOLAR_DEFAULT_COPTS,
     linkopts = BIPOLAR_DEFAULT_LINKOPTS,
