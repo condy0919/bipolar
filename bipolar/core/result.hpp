@@ -61,6 +61,7 @@ struct Err {
 
 namespace detail {
 /// `Result` related traits:
+///
 /// - is_result
 /// - is_pending
 /// - is_ok
@@ -122,6 +123,7 @@ public:
 /// be used for returning and propagating errors.
 ///
 /// It's a `std::pair` like class with the variants:
+///
 /// - `Ok`, representing success and containing a value
 /// - `Err`, representing error and containing an error
 /// - `Pending`, representing pending...

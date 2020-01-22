@@ -30,6 +30,6 @@ public:
 private:
     ::pthread_barrier_t barrier_;
 };
-} // namespace biplar
+} // namespace bipolar
 
 #endif

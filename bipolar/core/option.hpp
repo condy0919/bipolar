@@ -164,6 +164,7 @@ Some(T&& val) noexcept(noexcept(Option<T>(std::declval<T>()))) {
 /// contains a value, or `None`, and does not.
 ///
 /// It has many usages:
+///
 /// - Init values
 /// - Return value for otherwise reporting simple errors, where `None` is
 ///   returned on error
@@ -653,6 +654,7 @@ public:
 
     /// Returns `None` if the option is `None`, otherwise calls `f`
     /// with the wrapped value and returns:
+    ///
     /// - `Some(t)` if `f` returns `true` where `t` is the wrapped value, and
     /// - `None` if `f` returns `false`
     ///

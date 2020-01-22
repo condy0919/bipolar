@@ -34,6 +34,7 @@ class Function;
 /// It has another name called [any_invocable](http://wg21.link/p0288).
 ///
 /// NOTE:
+///
 /// If your construct a `Function` with a `NULL` function pointer, bool(*this)
 /// still equal to true. That's an another difference with `std::function`.
 ///
@@ -69,7 +70,7 @@ class Function;
 /// ```
 template <typename R, typename... Args>
 class Function<R(Args...)> {
-    using InsituType = void* [8]; // NOLINT(modernize-avoid-c-arrays)
+    using InsituType = void* [8];
 
     template <typename F>
     inline static constexpr bool
