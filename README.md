@@ -68,6 +68,12 @@ Checks `bazel-kcov` directory for code coverage.
 
 ## FAQ
 
+## Contributing
+
+Interested in getting involved? We would love to help you! For simple
+bug fixes, just submit a PR with the fix and we can discuss the fix
+directly in the PR. If the fix is more complex, start with an issue.
+
 [github-ci-badge]: https://github.com/condy0919/bipolar/workflows/BIPOLAR%20CI/badge.svg
 [github-link]: https://github.com/condy0919/bipolar
 [codacy-badge]: https://api.codacy.com/project/badge/Grade/7c5e88ade2944d7ca1741d2b3e709f4f
