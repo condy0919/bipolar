@@ -9,10 +9,12 @@
 
 #include <netinet/tcp.h>
 
+#include <chrono>
 #include <tuple>
 #include <utility>
 
 #include "bipolar/core/movable.hpp"
+#include "bipolar/core/option.hpp"
 #include "bipolar/core/result.hpp"
 #include "bipolar/core/void.hpp"
 #include "bipolar/net/socket_address.hpp"
@@ -40,6 +42,9 @@ namespace bipolar {
 /// stream.write(buf, 4);
 /// stream.read(buf, 4);
 /// ```
+///
+/// `man 7 tcp` for more information.
+///
 class TcpStream final : public Movable {
 public:
     /// Constructs a TCP stream from native handle (file descriptor).
@@ -177,6 +182,16 @@ public:
 
     /// Gets the value of the `TCP_NODELAY` option on this socket
     Result<bool, int> nodelay() noexcept;
+
+    /// Sets the linger duration of this socket by setting the `SO_LINGER`
+    /// option.
+    ///
+    /// It used to **RESET** connections.
+    Result<Void, int> set_linger(Option<std::chrono::seconds> s) noexcept;
+
+    /// Reads the linger duration for this socket by getting the `SO_LINGER`
+    /// option.
+    Result<Option<std::chrono::seconds>, int> linger() noexcept;
 
     /// Gets the value of the `SO_ERROR` option on this socket.
     ///
