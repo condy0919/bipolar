@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <iostream>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
@@ -8,11 +9,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <future>
 #include <queue>
 #include <thread>
 #include <tuple>
 #include <vector>
-#include <future>
 
 #include "bipolar/core/byteorder.hpp"
 #include "bipolar/core/function.hpp"
@@ -26,14 +27,20 @@ using namespace bipolar;
 using namespace std::string_literals;
 using namespace std::chrono_literals;
 
-// TODO more tests
-
 inline constexpr SocketAddress
     server_addr(IPv4Address(127, 0, 0, 1),
                 hton(static_cast<std::uint16_t>(8081)));
 
 const auto LISTENER_MAGIC_NUMBER =
     reinterpret_cast<void*>(static_cast<std::uintptr_t>(0x50043));
+
+static bool set_blocking(int fd) {
+    const int flags = ::fcntl(fd, F_GETFL, 0);
+    if (flags < 0) {
+        return false;
+    }
+    return ::fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) != -1;
+}
 
 TEST(TcpListener, bind_and_accept) {
     auto epoll = Epoll::create().expect("epoll_create failed");
@@ -48,11 +55,10 @@ TEST(TcpListener, bind_and_accept) {
         .expect("epoll add failed");
 
     Barrier barrier(2);
-    std::thread t(
-        [&]() {
-            auto strm = TcpStream::connect(server_addr).value();
-            barrier.wait();
-        });
+    std::thread t([&]() {
+        auto strm = TcpStream::connect(server_addr).value();
+        barrier.wait();
+    });
 
     epoll.poll(events, std::chrono::milliseconds(-1));
     EXPECT_EQ(events.size(), 1);
@@ -109,6 +115,12 @@ TEST(TcpStream, connect) {
     std::promise<Void> p1;
     std::future<Void> f1 = p1.get_future();
 
+    std::vector<struct epoll_event> events(10);
+    epoll.poll(events, std::chrono::milliseconds(-1)).value();
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.ptr, nullptr);
+    EXPECT_TRUE(!!(events[0].events & EPOLLOUT));
+
     std::thread t(
         [&listener, f0 = p0.get_future(), p1 = std::move(p1)]() mutable {
             auto [s, sa] = listener.accept().value();
@@ -117,13 +129,6 @@ TEST(TcpStream, connect) {
             p1.set_value(Void{});
         });
     t.detach();
-
-    std::vector<struct epoll_event> events(10);
-
-    epoll.poll(events, std::chrono::milliseconds(-1)).value();
-    EXPECT_EQ(events.size(), 1);
-    EXPECT_EQ(events[0].data.ptr, nullptr);
-    EXPECT_TRUE(!!(events[0].events & EPOLLOUT));
 
     p0.set_value(Void{});
     f1.wait();
@@ -142,8 +147,16 @@ TEST(TcpStream, read) {
     auto epoll = Epoll::create().expect("epoll_create failed");
     auto strm = TcpStream::connect(server_addr).expect("connect failed");
 
+    EXPECT_TRUE(set_blocking(listener.as_fd()));
+
     std::thread t([&listener]() {
-        auto [s, sa] = listener.accept().expect("accept failed");
+        auto tmp = listener.accept();
+        if (tmp.is_error()) {
+            EXPECT_EQ(tmp.error(), 0);
+        }
+
+        auto [s, sa] = tmp.take_value();
+        // auto [s, sa] = listener.accept().expect("accept failed");
 
         char buf[1024];
         std::size_t amount = 0;
@@ -183,8 +196,22 @@ TEST(TcpStream, write) {
     auto epoll = Epoll::create().expect("epoll_create failed");
     auto strm = TcpStream::connect(server_addr).expect("connect failed");
 
+    EXPECT_TRUE(set_blocking(listener.as_fd()));
+    EXPECT_TRUE(set_blocking(listener.as_fd()));
+
     std::thread t([&listener]() {
-        auto [s, sa] = listener.accept().expect("accept failed");
+        listener.local_addr().expect("wtf");
+
+        auto tmp = listener.accept();
+        if (tmp.is_error()) {
+            EXPECT_EQ(tmp.error(), -1);
+        }
+
+        auto [s, sa] = tmp.take_value();
+        // auto [s, sa] = listener.accept().expect("accept failed");
+
+        EXPECT_TRUE(set_blocking(s.as_fd()));
+        EXPECT_FALSE(s.nonblocking().value());
 
         char buf[1024];
         std::size_t amount = 0;

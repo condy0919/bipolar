@@ -171,6 +171,18 @@ public:
     /// `man 2 shutdown` for more information.
     Result<Void, int> shutdown(int how) noexcept;
 
+    /// Moves this TCP stream into or out of nonblocking mode.
+    ///
+    /// This will result in `read`, `write`, `recv` and `send` operations
+    /// becoming nonblocking, i.e., immediately returning from their calls.
+    /// If the IO operation is successful, `Ok` is returned and no further
+    /// action is required. If the IO operation could not be completed and
+    /// needs to be retried, `EAGAIN` is returned.
+    Result<Void, int> set_nonblocking(bool enable) noexcept;
+
+    /// Checks if the socket is in nonblocking mode
+    Result<bool, int> nonblocking() noexcept;
+
     /// Sets the value of the `TCP_NODELAY` option on this socket.
     ///
     /// If set, this option disables the Nagle algorithm. This means that

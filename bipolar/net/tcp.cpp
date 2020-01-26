@@ -1,5 +1,6 @@
 #include "bipolar/net/tcp.hpp"
 
+#include <fcntl.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -130,6 +131,29 @@ Result<Void, int> TcpStream::shutdown(int how) noexcept {
         return Err(errno);
     }
     return Ok(Void{});
+}
+
+Result<Void, int> TcpStream::set_nonblocking(bool enable) noexcept {
+    const int flags = ::fcntl(fd_, F_GETFL, 0);
+    if (flags < 0) {
+        return Err(errno);
+    }
+
+    if (enable) {
+        const int ret = ::fcntl(fd_, F_SETFL, flags | O_NONBLOCK);
+        if (ret == -1) {
+            return Err(errno);
+        }
+    }
+    return Ok(Void{});
+}
+
+Result<bool, int> TcpStream::nonblocking() noexcept {
+    const int flags = ::fcntl(fd_, F_GETFL, 0);
+    if (flags < 0) {
+        return Err(errno);
+    }
+    return Ok(static_cast<bool>(flags & O_NONBLOCK));
 }
 
 Result<Void, int> TcpStream::set_nodelay(bool enable) noexcept {
