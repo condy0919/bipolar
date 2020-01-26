@@ -12,6 +12,7 @@
 #include <thread>
 #include <tuple>
 #include <vector>
+#include <future>
 
 #include "bipolar/core/byteorder.hpp"
 #include "bipolar/core/function.hpp"
@@ -23,6 +24,7 @@
 
 using namespace bipolar;
 using namespace std::string_literals;
+using namespace std::chrono_literals;
 
 // TODO more tests
 
@@ -93,6 +95,358 @@ TEST(TcpStream, try_clone) {
     EXPECT_TRUE(!!(event.events & EPOLLOUT));
     EXPECT_TRUE(!!(event.events & EPOLLERR));
     EXPECT_EQ(strm.take_error().value(), ECONNREFUSED);
+}
+
+TEST(TcpStream, connect) {
+    auto listener = TcpListener::bind(server_addr).expect("bind failed");
+    auto epoll = Epoll::create().expect("epoll_create failed");
+    auto strm = TcpStream::connect(server_addr).expect("connect failed");
+
+    epoll.add(strm.as_fd(), nullptr, EPOLLIN | EPOLLOUT | EPOLLET | EPOLLRDHUP)
+        .expect("epoll add failed");
+
+    std::promise<Void> p0;
+    std::promise<Void> p1;
+    std::future<Void> f1 = p1.get_future();
+
+    std::thread t(
+        [&listener, f0 = p0.get_future(), p1 = std::move(p1)]() mutable {
+            auto [s, sa] = listener.accept().value();
+            f0.wait();
+            s.close();
+            p1.set_value(Void{});
+        });
+    t.detach();
+
+    std::vector<struct epoll_event> events(10);
+
+    epoll.poll(events, std::chrono::milliseconds(-1)).value();
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.ptr, nullptr);
+    EXPECT_TRUE(!!(events[0].events & EPOLLOUT));
+
+    p0.set_value(Void{});
+    f1.wait();
+
+    events.resize(10);
+    epoll.poll(events, std::chrono::milliseconds(-1)).value();
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.ptr, nullptr);
+    EXPECT_TRUE(!!(events[0].events & EPOLLIN));
+}
+
+TEST(TcpStream, read) {
+    const std::size_t N = 16 * 1024;
+
+    auto listener = TcpListener::bind(server_addr).expect("bind failed");
+    auto epoll = Epoll::create().expect("epoll_create failed");
+    auto strm = TcpStream::connect(server_addr).expect("connect failed");
+
+    std::thread t([&listener]() {
+        auto [s, sa] = listener.accept().expect("accept failed");
+
+        char buf[1024];
+        std::size_t amount = 0;
+        while (amount < N) {
+            amount += s.write(buf, sizeof(buf)).expect("write failed");
+        }
+    });
+    t.detach();
+
+    epoll.add(strm.as_fd(), nullptr, EPOLLIN | EPOLLRDHUP | EPOLLET);
+
+    std::size_t amount = 0;
+    std::vector<struct epoll_event> events(10);
+    while (amount < N) {
+        epoll.poll(events, std::chrono::milliseconds(-1)).value();
+        EXPECT_EQ(events.size(), 1);
+
+        char buf[1024];
+        while (true) {
+            auto result = strm.read(buf, sizeof(buf));
+            if (result.is_ok()) {
+                amount += result.value();
+            } else {
+                break;
+            }
+            if (amount >= N) {
+                break;
+            }
+        }
+    }
+}
+
+TEST(TcpStream, write) {
+    const std::size_t N = 16 * 1024;
+
+    auto listener = TcpListener::bind(server_addr).expect("bind failed");
+    auto epoll = Epoll::create().expect("epoll_create failed");
+    auto strm = TcpStream::connect(server_addr).expect("connect failed");
+
+    std::thread t([&listener]() {
+        auto [s, sa] = listener.accept().expect("accept failed");
+
+        char buf[1024];
+        std::size_t amount = 0;
+        while (amount < N) {
+            amount += s.read(buf, sizeof(buf)).expect("read failed");
+        }
+    });
+    t.detach();
+
+    epoll.add(strm.as_fd(), nullptr, EPOLLOUT | EPOLLET);
+
+    std::size_t amount = 0;
+    std::vector<struct epoll_event> events(10);
+    while (amount < N) {
+        epoll.poll(events, std::chrono::milliseconds(-1)).value();
+        EXPECT_EQ(events.size(), 1);
+
+        char buf[1024];
+        while (true) {
+            auto result = strm.write(buf, sizeof(buf));
+            if (result.is_ok()) {
+                amount += result.value();
+            } else {
+                break;
+            }
+            if (amount >= N) {
+                break;
+            }
+        }
+    }
+}
+
+TEST(TcpStream, connect_then_close) {
+    auto listener = TcpListener::bind(server_addr).expect("bind failed");
+    auto epoll = Epoll::create().expect("epoll_create failed");
+    auto strm = TcpStream::connect(server_addr).expect("connect failed");
+
+    epoll.add(listener.as_fd(), 1, EPOLLIN | EPOLLET);
+    epoll.add(strm.as_fd(), 2, EPOLLIN | EPOLLET);
+
+    bool shutdown = false;
+    std::vector<struct epoll_event> events(10);
+    while (!shutdown) {
+        epoll.poll(events, std::chrono::milliseconds(-1));
+
+        for (auto event : events) {
+            if (event.data.fd == 1) {
+                auto [s, sa] = listener.accept().value();
+                epoll.add(s.as_fd(), 3, EPOLLIN | EPOLLOUT | EPOLLET);
+                s.close();
+            } else if (event.data.fd == 2) {
+                shutdown = true;
+            }
+        }
+    }
+}
+
+TEST(TcpStream, listen_then_close) {
+    auto listener = TcpListener::bind(server_addr).expect("bind failed");
+    auto epoll = Epoll::create().expect("epoll_create failed");
+
+    epoll.add(listener.as_fd(), nullptr, EPOLLIN | EPOLLRDHUP | EPOLLET);
+    listener.close();
+
+    std::vector<struct epoll_event> events(10);
+    epoll.poll(events, std::chrono::milliseconds(100));
+    EXPECT_EQ(events.size(), 0);
+}
+
+TEST(TcpStream, connect_error) {
+    auto epoll = Epoll::create().expect("epoll_create failed");
+    auto strm = TcpStream::connect(server_addr).expect("connect failed");
+
+    epoll.add(strm.as_fd(), nullptr, EPOLLOUT | EPOLLET);
+
+    std::vector<struct epoll_event> events(10);
+    epoll.poll(events, std::chrono::milliseconds(-1));
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_TRUE(!!(events[0].events & EPOLLOUT));
+    EXPECT_EQ(strm.take_error().value(), ECONNREFUSED);
+}
+
+TEST(TcpStream, write_then_drop) {
+    auto listener = TcpListener::bind(server_addr).expect("bind failed");
+    auto epoll = Epoll::create().expect("epoll_create failed");
+    auto strm = TcpStream::connect(server_addr).expect("connect failed");
+
+    epoll.add(listener.as_fd(), 1, EPOLLIN | EPOLLET);
+    epoll.add(strm.as_fd(), 2, EPOLLIN | EPOLLET);
+
+    std::vector<struct epoll_event> events(10);
+    epoll.poll(events, std::chrono::milliseconds(-1));
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.fd, 1);
+
+    auto strm2 = std::get<0>(listener.accept().value());
+    epoll.add(strm2.as_fd(), 3, EPOLLOUT | EPOLLET);
+
+    strm2.write("1234", 4);
+    strm2.close();
+
+    epoll.poll(events, std::chrono::milliseconds(-1));
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.fd, 2);
+
+    char buf[4] = "";
+    strm.read(buf, sizeof(buf));
+    EXPECT_TRUE(std::memcmp(buf, "1234", 4) == 0);
+}
+
+TEST(TcpStream, connection_reset_by_peer) {
+    auto listener = TcpListener::bind(server_addr).expect("bind failed");
+    auto epoll = Epoll::create().expect("epoll_create failed");
+    auto strm = TcpStream::connect(server_addr).expect("connect failed");
+
+    epoll.add(listener.as_fd(), 1, EPOLLIN | EPOLLET | EPOLLONESHOT);
+    epoll.add(strm.as_fd(), 2, EPOLLIN | EPOLLET);
+
+    std::vector<struct epoll_event> events(10);
+    epoll.poll(events, std::chrono::milliseconds(-1));
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.fd, 1);
+
+    auto strm2 = std::get<0>(listener.accept().value());
+
+    // reset the connection
+    strm.set_linger(Some(0s));
+    strm.close();
+
+    epoll.add(strm2.as_fd(), 3, EPOLLIN | EPOLLET);
+    epoll.poll(events, std::chrono::milliseconds(-1));
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.fd, 3);
+
+    char buf[10];
+    auto result = strm2.read(buf, sizeof(buf));
+    EXPECT_TRUE(result.is_error());
+    EXPECT_EQ(result.error(), ECONNRESET);
+}
+
+TEST(TcpStream, write_error) {
+    auto listener = TcpListener::bind(server_addr).expect("bind failed");
+    auto epoll = Epoll::create().expect("epoll_create failed");
+    auto strm = TcpStream::connect(server_addr).expect("connect failed");
+
+    epoll.add(listener.as_fd(), 0, EPOLLIN | EPOLLET);
+
+    std::vector<struct epoll_event> events(10);
+    epoll.poll(events, std::chrono::milliseconds(-1));
+
+    auto [s, sa] = listener.accept().value();
+    s.close();
+
+    char buf[10] = "miss";
+    Result<std::size_t, int> result;
+    while ((result = strm.send(buf, sizeof(buf), MSG_NOSIGNAL)).is_ok()) {
+    }
+    EXPECT_TRUE(result.is_error());
+    EXPECT_EQ(result.error(), EPIPE);
+}
+
+TEST(TcpStream, write_shutdown) {
+    auto listener = TcpListener::bind(server_addr).expect("bind failed");
+    auto epoll = Epoll::create().expect("epoll_create failed");
+    auto strm = TcpStream::connect(server_addr).expect("connect failed");
+
+    epoll.add(listener.as_fd(), 0, EPOLLIN | EPOLLET);
+
+    std::vector<struct epoll_event> events(10);
+    epoll.poll(events, std::chrono::milliseconds(-1));
+
+    auto [s, sa] = listener.accept().value();
+    s.shutdown(SHUT_WR);
+
+    epoll.add(strm.as_fd(), 0, EPOLLIN | EPOLLET);
+    epoll.poll(events, std::chrono::milliseconds(-1));
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_TRUE(!!(events[0].events & EPOLLIN));
+}
+
+TEST(TcpStream, write_then_del) {
+    auto listener = TcpListener::bind(server_addr).expect("bind failed");
+    auto epoll = Epoll::create().expect("epoll_create failed");
+    auto strm = TcpStream::connect(server_addr).expect("connect failed");
+
+    epoll.add(listener.as_fd(), 1, EPOLLIN | EPOLLET);
+    epoll.add(strm.as_fd(), 3, EPOLLIN | EPOLLET);
+
+    std::vector<struct epoll_event> events(10);
+    epoll.poll(events, std::chrono::milliseconds(-1));
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.fd, 1);
+
+    auto strm2 = std::get<0>(listener.accept().value());
+    epoll.add(strm2.as_fd(), 2, EPOLLOUT | EPOLLET);
+    epoll.poll(events, std::chrono::milliseconds(-1));
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.fd, 2);
+
+    strm2.write("1234", 4);
+    epoll.del(strm2.as_fd());
+    epoll.poll(events, std::chrono::milliseconds(-1));
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.fd, 3);
+
+    char buf[10];
+    auto result = strm.read(buf, sizeof(buf));
+    EXPECT_TRUE(result.is_ok());
+    EXPECT_EQ(result.value(), 4);
+    EXPECT_TRUE(std::memcmp(buf, "1234", 4) == 0);
+}
+
+TEST(TcpStream, tcp_no_events_after_del) {
+    auto listener = TcpListener::bind(server_addr).expect("bind failed");
+    auto epoll = Epoll::create().expect("epoll_create failed");
+    auto strm = TcpStream::connect(server_addr).expect("connect failed");
+
+    epoll.add(listener.as_fd(), 1, EPOLLIN | EPOLLET);
+    epoll.add(strm.as_fd(), 3, EPOLLIN | EPOLLET);
+
+    std::vector<struct epoll_event> events(10);
+    epoll.poll(events, std::chrono::milliseconds(-1));
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.fd, 1);
+
+    auto [strm2, strm2_addr] = listener.accept().value();
+    EXPECT_TRUE(strm2_addr.addr().is_loopback());
+    EXPECT_EQ(strm2.peer_addr().value(), strm2_addr);
+    EXPECT_EQ(strm2.local_addr().value(), server_addr);
+
+    epoll.add(strm2.as_fd(), 2, EPOLLOUT | EPOLLET);
+    epoll.poll(events, std::chrono::milliseconds(-1));
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.fd, 2);
+
+    strm2.write("1234", 4);
+    epoll.poll(events, std::chrono::milliseconds(-1));
+    EXPECT_EQ(events.size(), 1);
+    EXPECT_EQ(events[0].data.fd, 3);
+    EXPECT_TRUE(!!(events[0].events & EPOLLIN));
+
+    epoll.del(listener.as_fd());
+    epoll.del(strm.as_fd());
+    epoll.del(strm2.as_fd());
+
+    epoll.poll(events, 10ms);
+    EXPECT_EQ(events.size(), 0);
+
+    char buf[10];
+    strm.read(buf, sizeof(buf));
+    EXPECT_TRUE(std::memcmp(buf, "1234", 4) == 0);
+
+    strm2.write("9876", 4);
+    epoll.poll(events, 10ms);
+    EXPECT_EQ(events.size(), 0);
+
+    std::this_thread::sleep_for(100ms);
+    strm.read(buf, sizeof(buf));
+    EXPECT_TRUE(std::memcmp(buf, "9876", 4) == 0);
+
+    epoll.poll(events, 10ms);
+    EXPECT_EQ(events.size(), 0);
 }
 
 TEST(TcpStream, shutdown) {
