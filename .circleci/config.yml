@@ -1,0 +1,65 @@
+version: 2.1
+
+commands:
+  install-bazel:
+    steps:
+      - run:
+          name: Installing bazel
+          command: |
+            curl -OL https://github.com/bazelbuild/bazel/releases/download/0.29.1/bazel-0.29.1-installer-linux-x86_64.sh
+            chmod +x bazel-0.29.1-installer-linux-x86_64.sh
+            ./bazel-0.29.1-installer-linux-x86_64.sh
+            rm ./bazel-0.29.1-installer-linux-x86_64.sh
+            bazel --version
+
+  install-kcov:
+    steps:
+      - run:
+          name: Installing kcov
+          command: |
+            apt update
+            apt install -y binutils-dev libcurl4-openssl-dev zlib1g-dev libdw-dev libiberty-dev cmake
+            git clone https://github.com/SimonKagstrom/kcov
+            pushd kcov
+            cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release
+            pushd build
+            make install
+            popd
+            popd
+            rm kcov -rf
+
+  sysinfo:
+    steps:
+      - run:
+          name: System information
+          command: |
+            uname -a
+            free -m
+            gcc --version
+
+jobs:
+  build:
+    docker:
+      - image: gcc:9
+    steps:
+      - sysinfo
+      - install-bazel
+      # - install-kcov
+      - checkout
+      - run:
+          name: Building
+          command: bazel build //... -j $(nproc)
+      - run:
+          name: Testing
+          command: bazel test //... -j $(nproc) --test_tag_filters='-io_uring'
+      # - run:
+      #     name: Testing with code coverage reports
+      #     command: |
+      #       bazel test --config=kcov //... --test_tag_filters='-io_uring,-benchmark' --experimental_local_memory_estimate
+      #       bash <(curl -s https://codecov.io/bash) -s bazel-out
+
+workflows:
+  version: 2
+  default_workflow:
+    jobs:
+      - build
