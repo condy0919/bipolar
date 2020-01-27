@@ -180,9 +180,6 @@ public:
     /// needs to be retried, `EAGAIN` is returned.
     Result<Void, int> set_nonblocking(bool enable) noexcept;
 
-    /// Checks if the socket is in nonblocking mode
-    Result<bool, int> nonblocking() noexcept;
-
     /// Sets the value of the `TCP_NODELAY` option on this socket.
     ///
     /// If set, this option disables the Nagle algorithm. This means that
