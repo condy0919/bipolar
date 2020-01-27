@@ -34,7 +34,7 @@ Result<Epoll, int> Epoll::create() noexcept {
 Result<Void, int> Epoll::poll(std::vector<struct epoll_event>& events,
                               std::chrono::milliseconds timeout) noexcept {
     const int ret =
-        ::epoll_wait(epfd_, events.data(), events.size(), timeout.count());
+        ::epoll_wait(epfd_, events.data(), events.capacity(), timeout.count());
     if (ret == -1) {
         return Err(errno);
     }

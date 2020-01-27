@@ -1,6 +1,7 @@
 #include "bipolar/net/tcp.hpp"
 
 #include <netinet/tcp.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -132,6 +133,15 @@ Result<Void, int> TcpStream::shutdown(int how) noexcept {
     return Ok(Void{});
 }
 
+Result<Void, int> TcpStream::set_nonblocking(bool enable) noexcept {
+    int opt = static_cast<int>(enable);
+    const int ret = ::ioctl(fd_, FIONBIO, &opt);
+    if (ret == -1) {
+        return Err(errno);
+    }
+    return Ok(Void{});
+}
+
 Result<Void, int> TcpStream::set_nodelay(bool enable) noexcept {
     const int optval = static_cast<int>(enable);
     const int ret =
@@ -150,6 +160,38 @@ Result<bool, int> TcpStream::nodelay() noexcept {
         return Err(errno);
     }
     return Ok(static_cast<bool>(optval));
+}
+
+Result<Void, int>
+TcpStream::set_linger(Option<std::chrono::seconds> s) noexcept {
+    struct linger opt = {
+        .l_onoff = s.has_value(),
+        .l_linger = 0,
+    };
+
+    if (s.has_value()) {
+        opt.l_linger = s.value().count();
+    }
+
+    const int ret = ::setsockopt(fd_, SOL_SOCKET, SO_LINGER, &opt, sizeof(opt));
+    if (ret == -1) {
+        return Err(errno);
+    }
+    return Ok(Void{});
+}
+
+Result<Option<std::chrono::seconds>, int> TcpStream::linger() noexcept {
+    struct linger opt;
+    socklen_t len = sizeof(opt);
+    const int ret = ::getsockopt(fd_, SOL_SOCKET, SO_LINGER, &opt, &len);
+    if (ret == -1) {
+        return Err(errno);
+    }
+    if (opt.l_onoff) {
+        return Ok(Some(std::chrono::seconds(opt.l_linger)));
+    } else {
+        return Ok(None);
+    }
 }
 
 Result<int, int> TcpStream::take_error() noexcept {
