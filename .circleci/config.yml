@@ -6,10 +6,11 @@ commands:
       - run:
           name: Installing bazel
           command: |
-            curl -OL https://github.com/bazelbuild/bazel/releases/download/0.29.1/bazel-0.29.1-installer-linux-x86_64.sh
-            chmod +x bazel-0.29.1-installer-linux-x86_64.sh
-            ./bazel-0.29.1-installer-linux-x86_64.sh
-            rm ./bazel-0.29.1-installer-linux-x86_64.sh
+            bazel_version=2.0.0
+            curl -OL https://github.com/bazelbuild/bazel/releases/download/${bazel_version}/bazel-${bazel_version}-installer-linux-x86_64.sh
+            chmod +x bazel-${bazel_version}-installer-linux-x86_64.sh
+            ./bazel-${bazel_version}-installer-linux-x86_64.sh
+            rm ./bazel-${bazel_version}-installer-linux-x86_64.sh
             bazel --version
 
   sysinfo:
@@ -31,10 +32,10 @@ jobs:
       - checkout
       - run:
           name: Building
-          command: bazel build //...
+          command: bazel build //... --jobs=4 # --jobs=auto will be OOM killed
       - run:
           name: Testing
-          command: bazel test //... --test_tag_filters='-io_uring,-benchmark,-example'
+          command: bazel test //... --test_tag_filters='-io_uring,-benchmark,-example' --test_output=errors
 
 workflows:
   version: 2
