@@ -24,6 +24,9 @@ jobs:
       - name: Building
         run: CC=clang bazel build //...
 
+      - name: Testing
+        run: CC=clang bazel test //... --test_tag_filters='-io_uring,-benchmark,-example' --test_output=errors
+
   build:
     name: ubuntu-gcc-9
     runs-on: ubuntu-latest
