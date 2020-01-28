@@ -145,6 +145,15 @@ struct is_instantiation_of<C<Ts...>, C> : std::true_type {};
 template <typename T, template <typename...> class C>
 inline constexpr bool is_instantiation_of_v = is_instantiation_of<T, C>::value;
 
+/// minic: std::type_identity
+template <typename T>
+struct type_identity {
+    using type = T;
+};
+
+template <typename T>
+using type_identity_t = typename type_identity<T>::type;
+
 } // namespace bipolar
 
 #endif
