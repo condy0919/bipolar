@@ -18,7 +18,7 @@ TEST(FunctionRef, Traits) {
     EXPECT_TRUE(std::is_trivially_move_assignable_v<FunctionRef<int(int)>>);
     EXPECT_TRUE((std::is_trivially_assignable_v<FunctionRef<int(int)>,
                                                 FunctionRef<int(int)>&>));
-    
+
     EXPECT_TRUE(std::is_nothrow_copy_constructible_v<FunctionRef<int(int)>>);
     EXPECT_TRUE(std::is_nothrow_move_constructible_v<FunctionRef<int(int)>>);
     EXPECT_TRUE((std::is_nothrow_constructible_v<FunctionRef<int(int)>,
@@ -55,6 +55,22 @@ TEST(FunctionRef, Simple) {
     EXPECT_EQ(1059, cfcref(5));
     EXPECT_EQ(1065, cfcref(6));
     EXPECT_EQ(1072, cfcref(7));
+}
+
+int add1(int x) {
+    return x + 1;
+}
+
+int add2(int x) {
+    return x + 2;
+}
+
+TEST(FunctionRef, pointer_to_function) {
+    FunctionRef<int(int)> add = add1;
+    EXPECT_EQ(add(41), 42);
+
+    add = add2;
+    EXPECT_EQ(add(40), 42);
 }
 
 TEST(FunctionRef, FunctionPtr) {

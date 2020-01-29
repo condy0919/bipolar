@@ -40,38 +40,54 @@ class FunctionRef;
 
 template <typename R, typename... Args>
 class FunctionRef<R(Args...)> {
+    // Used to disable incompatile types
+    template <typename F>
+    using EnableIf = std::enable_if_t<
+        !std::is_same_v<std::remove_cv_t<std::remove_reference_t<F>>,
+                        FunctionRef> &&
+        std::is_invocable_r_v<R, F, Args...>>;
+
 public:
-    template <typename F,
-              std::enable_if_t<
-                  !std::is_same_v<std::remove_cv_t<std::remove_reference_t<F>>,
-                                  FunctionRef> &&
-                      std::is_invocable_r_v<R, F, Args...>,
-                  int> = 0>
-    // it has been checked by `std::enable_if_t`
-    // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
+    /// Constructs from callable objects except itself
+    template <typename F, typename = EnableIf<F>>
     constexpr /*implicit*/ FunctionRef(F&& f) noexcept
         : obj_((void*)std::addressof(f)), call_(make_call<F>()) {}
 
+    /// Overload for function pointers. This eliminates a level of indirection
+    /// call that would happen if the above overload was used (it lets us store
+    /// the pointer instead of a pointer to pointer).
+    template <typename F, typename = EnableIf<F*>>
+    constexpr /*implicit*/ FunctionRef(F* f) noexcept
+        : obj_((void*)f), call_(make_call<F>()) {}
+
+    /// CopyConstructor
     constexpr FunctionRef(const FunctionRef&) noexcept = default;
 
-    template <typename F,
-              std::enable_if_t<
-                  !std::is_same_v<std::remove_cv_t<std::remove_reference_t<F>>,
-                                  FunctionRef> &&
-                      std::is_invocable_r_v<R, F, Args...>,
-                  int> = 0>
+    /// Assignment from callable objects except itself
+    template <typename F, typename = EnableIf<F>>
     constexpr FunctionRef& operator=(F&& f) noexcept {
         obj_ = (void*)std::addressof(f);
         call_ = make_call<F>();
         return *this;
     }
 
+    /// Overload for function pointers.
+    template <typename F, typename = EnableIf<F*>>
+    constexpr FunctionRef& operator=(F* f) noexcept {
+        obj_ = (void*)f;
+        call_ = make_call<F>();
+        return *this;
+    }
+
+    /// CopyAssignment
     constexpr FunctionRef& operator=(const FunctionRef&) noexcept = default;
 
+    /// Calls the underlying object
     R operator()(Args... args) const {
         return call_(obj_, std::forward<Args>(args)...);
     }
 
+    /// Swaps
     constexpr void swap(FunctionRef& other) noexcept {
         std::swap(obj_, other.obj_);
         std::swap(call_, other.call_);
@@ -83,7 +99,7 @@ private:
     template <typename F>
     constexpr CallType make_call() noexcept {
         return [](void* obj, Args... args) -> R {
-            return std::invoke(*static_cast<std::add_pointer_t<F>>(obj),
+            return std::invoke(*reinterpret_cast<std::add_pointer_t<F>>(obj),
                                std::forward<Args>(args)...);
         };
     }
