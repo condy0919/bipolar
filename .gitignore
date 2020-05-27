@@ -31,7 +31,8 @@
 *.out
 *.app
 
+compile_commands.json
 .ccls-cache
+.clangd
 .ccls
 bazel-*
-html/

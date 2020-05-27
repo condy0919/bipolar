@@ -41,7 +41,7 @@ protected:
     }
 
 private:
-    F f_;
+    [[no_unique_address]] F f_;
 };
 } // namespace detail
 

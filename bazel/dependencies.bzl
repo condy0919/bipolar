@@ -40,7 +40,7 @@ def _com_github_fmtlib_fmt():
     new_git_repository(
         name = "fmtlib",
         remote = "https://github.com/fmtlib/fmt",
-        tag = "6.1.1",
+        tag = "6.2.1",
         build_file = "@bipolar//bazel/external:fmtlib.BUILD",
     )
 
@@ -48,6 +48,6 @@ def _com_github_gabime_spdlog():
     new_git_repository(
         name = "spdlog",
         remote = "https://github.com/gabime/spdlog",
-        tag = "v1.4.2",
+        tag = "v1.6.1",
         build_file = "@bipolar//bazel/external:spdlog.BUILD",
     )
